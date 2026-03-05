@@ -1,0 +1,340 @@
+# ============================================================================
+# Feature 03: Legal Email Drafting
+# Tests the /api/v1/ai/draft-email endpoint.
+#
+# Key quality dimensions:
+# - Output is email BODY only (no subject line)
+# - Correct tone (professional / formal / friendly per request)
+# - All key_points are included
+# - Appropriate professional legal language
+# - Does not give legal advice to the end recipient
+#
+# Run: npx promptfoo eval -c evals/features/03_email_drafting.yaml
+# ============================================================================
+
+description: "StatutePro — Email Drafting (Feature 03)"
+
+providers:
+  - id: openai:openai/gpt-oss-20b
+    label: "GPT-OSS-20B (production)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.5
+      max_tokens: 700
+
+  - id: openai:Qwen/Qwen3-235B-A22B
+    label: "Qwen3-235B (upgrade)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.5
+      max_tokens: 700
+
+prompts:
+  - label: "Email Drafter"
+    raw: |
+      [
+        {
+          "role": "system",
+          "content": "You are a legal communications expert helping lawyers draft emails. Write in a {{tone_desc}} tone. Be clear, concise, and appropriate for legal correspondence. Output only the email body (no subject line)."
+        },
+        {
+          "role": "user",
+          "content": "Draft an email with the subject: '{{subject}}'\nContext: {{context}}{{key_points_text}}"
+        }
+      ]
+
+defaultTest:
+  vars:
+    tone_desc: "professional and precise"
+    key_points_text: ""
+  assert:
+    - type: not-regex
+      value: "^Subject:"
+      metric: Format
+    - type: not-icontains
+      value: "Subject: "
+      metric: Format
+    - type: latency
+      threshold: 12000
+      metric: Performance
+
+threshold: 0.85
+
+tests:
+
+  # ── Client Update Emails ───────────────────────────────────────────────────
+
+  - description: "Client case update — discovery complete, deposition scheduled"
+    vars:
+      subject: "Case Update — Oduya v. Retail Corp Employment Claim"
+      context: >
+        Client James Oduya's employment discrimination claim is progressing well.
+        The discovery phase has now been completed. A deposition has been scheduled
+        for March 15, 2025. The firm is optimistic about the merits of the case.
+      key_points_text: |
+
+        Key points to include:
+        - Discovery phase is now complete
+        - Deposition scheduled: March 15, 2025
+        - Request any additional supporting documents the client wishes to provide
+        - Confirm the client's availability for a pre-deposition briefing
+    assert:
+      - type: icontains
+        value: "March 15"
+        metric: Accuracy
+      - type: icontains
+        value: "discover"
+        metric: Completeness
+      - type: icontains
+        value: "deposition"
+        metric: Completeness
+      - type: llm-rubric
+        value: "Professional legal email body: confirms discovery completion, states March 15 deposition date, requests additional documents, and asks about client availability for pre-deposition prep. No subject line included."
+        metric: Quality
+        weight: 2
+
+  - description: "Case closure notification — matter resolved"
+    vars:
+      subject: "Matter Closure — Estate of Kamau (Matter #2024-0892)"
+      context: >
+        The estate administration matter for the estate of the late Peter Kamau has been
+        successfully concluded. All assets have been distributed to beneficiaries per the
+        will. Final accounting has been submitted to the court. The firm's services are
+        now complete.
+      key_points_text: |
+
+        Key points to include:
+        - Matter has been successfully concluded
+        - All assets distributed to beneficiaries
+        - Final court accounting complete
+        - Request client to confirm receipt of all distributed assets
+        - Advise that client may retain the firm's services for future legal needs
+    assert:
+      - type: llm-rubric
+        value: "Professional closure letter confirming successful conclusion, mentions asset distribution, court accounting, requests confirmation, and offers continued representation. Appropriate for legal correspondence."
+        metric: Quality
+      - type: llm-rubric
+        value: "Warm but professional tone appropriate for a sensitive estate matter. Does not use overly casual language."
+        metric: Format
+
+  # ── Demand Letters / Formal Correspondence ────────────────────────────────
+
+  - description: "Payment demand letter — formal tone, legal action threat"
+    vars:
+      tone_desc: "formal and authoritative"
+      subject: "Demand for Payment — Invoice #INV-2025-0042 — URGENT"
+      context: >
+        Our client, Thornton & Associates, Advocates LLP, is owed KES 450,000 by ABC Corp
+        for legal services rendered between October and December 2024. Invoice #INV-2025-0042
+        was issued on January 10, 2025. Payment is now 45 days overdue.
+      key_points_text: |
+
+        Key points to include:
+        - Reference Invoice #INV-2025-0042 for KES 450,000
+        - Demand payment within 14 days of this letter
+        - State that legal action will be instituted if payment is not received
+        - Mention that interest will accrue on the outstanding amount
+    assert:
+      - type: icontains
+        value: "INV-2025-0042"
+        metric: Accuracy
+      - type: icontains
+        value: "450,000"
+        metric: Accuracy
+      - type: icontains
+        value: "14"
+        metric: Completeness
+      - type: llm-rubric
+        value: "Formal, authoritative demand letter mentioning: invoice number, amount (KES 450k), 14-day deadline, legal action consequence, and interest on outstanding amount. Appropriate formal legal tone."
+        metric: Quality
+        weight: 2
+
+  - description: "Cease and desist — IP infringement (formal tone)"
+    vars:
+      tone_desc: "formal and authoritative"
+      subject: "Cease and Desist — Unauthorised Use of Registered Trademark"
+      context: >
+        Our client, InnovateTech Ltd., is the registered owner of the trademark "CloudEdge"
+        (Reg. No. KE-TM-2019-4521). The recipient company, CopyCat Solutions Ltd., has been
+        using the mark "CloudEdge Pro" in commerce since January 2025 without authorisation.
+      key_points_text: |
+
+        Key points to include:
+        - Identify our client's registered trademark and registration number
+        - Demand immediate cessation of use within 7 days
+        - Demand written confirmation of cessation
+        - State that failure to comply will result in trademark infringement proceedings
+    assert:
+      - type: icontains
+        value: "CloudEdge"
+        metric: Accuracy
+      - type: icontains
+        value: "KE-TM-2019-4521"
+        metric: Accuracy
+      - type: icontains
+        value: "7"
+        metric: Completeness
+      - type: llm-rubric
+        value: "Formal cease and desist letter: identifies registered mark and number, demands cessation within 7 days, requests written confirmation, warns of infringement proceedings. Authoritative formal tone."
+        metric: Quality
+        weight: 2
+
+  # ── Client-Facing / Friendly Tone ─────────────────────────────────────────
+
+  - description: "New client welcome email — friendly but professional"
+    vars:
+      tone_desc: "friendly yet professional"
+      subject: "Welcome to Thornton & Associates — Your New Client Portal Access"
+      context: >
+        A new client, Sarah Wanjiku, has just signed an engagement letter. She is a first-time
+        legal client, slightly nervous about the process. We want to make her feel welcomed
+        and confident in our firm.
+      key_points_text: |
+
+        Key points to include:
+        - Welcome her warmly to the firm
+        - Introduce the client portal (StatutePro) for document sharing and case updates
+        - Explain she can message the team through the portal
+        - Provide a brief overview of next steps (first consultation scheduled)
+        - Encourage her to reach out with any questions
+    assert:
+      - type: llm-rubric
+        value: "Warm, welcoming tone that reduces anxiety for a first-time legal client. Mentions client portal for documents and communication. Covers next steps. Friendly yet maintains professional credibility."
+        metric: Quality
+        weight: 2
+      - type: llm-rubric
+        value: "Does not use overly formal or intimidating legalese. Accessible language for a non-lawyer client."
+        metric: Format
+
+  - description: "Settlement update — good news for client"
+    vars:
+      tone_desc: "professional and precise"
+      subject: "Settlement Offer — Johnson Personal Injury Claim"
+      context: >
+        Opposing counsel has offered a settlement of KES 2,500,000 for the personal injury
+        claim. This is above the minimum range we discussed with the client. We recommend
+        accepting the offer. Client needs to confirm their decision.
+      key_points_text: |
+
+        Key points to include:
+        - Summarise the settlement offer amount (KES 2,500,000)
+        - State that we recommend accepting based on the merits
+        - Explain the client has final decision-making authority
+        - Request client confirmation by March 5, 2025
+        - Advise that if client wants to discuss further, they can call or use the portal
+    assert:
+      - type: icontains
+        value: "2,500,000"
+        metric: Accuracy
+      - type: icontains
+        value: "March 5"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Email communicates settlement amount, firm's recommendation to accept, client's right to decide, March 5 deadline for confirmation, and contact options. Does not guarantee outcome or pressure client."
+        metric: Quality
+
+  # ── Internal Correspondence ───────────────────────────────────────────────
+
+  - description: "Internal memo to partner — matter status update"
+    vars:
+      tone_desc: "professional and precise"
+      subject: "Matter Status Update — TechVentures v. CloudSolutions (Mttr #2025-0107)"
+      context: >
+        Associate attorney updating the supervising partner on a commercial litigation matter.
+        Discovery was completed last week. Key document: 3 internal emails from defendant showing
+        awareness of the breach. Expert witness has been engaged. Trial date is October 14, 2025.
+      key_points_text: |
+
+        Key points to include:
+        - Discovery is complete; 3 key documents identified showing defendant's awareness
+        - Expert witness (Prof. J. Mwangi, IT expert) has been retained
+        - Trial scheduled for October 14, 2025
+        - Request partner approval for expert witness fee of USD 15,000
+    assert:
+      - type: icontains
+        value: "October 14"
+        metric: Accuracy
+      - type: icontains
+        value: "15,000"
+        metric: Completeness
+      - type: llm-rubric
+        value: "Professional internal memo: reports discovery completion and key documents found, mentions Prof. Mwangi as retained expert, states October 14 trial date, and requests $15k approval for expert fees."
+        metric: Quality
+
+  # ── Format Compliance Tests ────────────────────────────────────────────────
+
+  - description: "[FORMAT] Email body only — no subject line included"
+    vars:
+      subject: "Test Email — Format Compliance"
+      context: "This is a test to confirm the AI outputs only the email body."
+    assert:
+      - type: not-regex
+        value: "^Subject:"
+        metric: Format
+        weight: 2
+      - type: not-regex
+        value: "Subject: Test Email"
+        metric: Format
+        weight: 2
+      - type: llm-rubric
+        value: "Output starts directly with the email salutation or opening sentence. Does NOT begin with 'Subject:' or include the subject line as part of the output."
+        metric: Format
+        weight: 2
+
+  - description: "[FORMAT] Professional tone — no emoji, slang, or casual language"
+    vars:
+      subject: "Client Meeting Confirmation"
+      context: "Confirming a meeting with client James Oduya for March 10, 2025 at 10am at the firm offices."
+    assert:
+      - type: not-regex
+        value: "[😀-🙏🏿]|lol|omg|hey!|cheers!|awesome"
+        metric: Format
+      - type: llm-rubric
+        value: "Uses formal, professional legal correspondence language throughout. No casual expressions, slang, or emoji."
+        metric: Format
+        weight: 2
+
+  # ── Edge Cases ────────────────────────────────────────────────────────────
+
+  - description: "[EDGE] Bilingual English/Swahili context"
+    vars:
+      subject: "Maombi ya Mkutano / Meeting Request"
+      context: >
+        The client, Bwana Hassan Omari, prefers to communicate in Swahili. The lawyer
+        wants to send a brief meeting request email that the client will understand easily.
+        The meeting is on 20 March 2025 at 2pm at the firm offices in Mombasa.
+    assert:
+      - type: llm-rubric
+        value: "Produces a clear, professional email that a Swahili-speaking client can understand. Either writes in Swahili or provides bilingual English/Swahili content. States the March 20 meeting date and 2pm time."
+        metric: Quality
+
+  - description: "[EDGE] Sensitive content — termination of employment by client firm"
+    vars:
+      tone_desc: "professional and precise"
+      subject: "Notice of Termination of Employment — John Kamau"
+      context: >
+        The firm's client, ABC Corp Ltd, needs to formally terminate an employee (John Kamau,
+        Employee No. 00247) for redundancy. The termination is lawful under Kenyan employment
+        law. One month's notice period applies. Severance of 15 days per year for 3 years
+        of service is due (total: 45 days' pay at KES 3,200/day = KES 144,000).
+      key_points_text: |
+
+        Key points:
+        - Formal notice of termination for redundancy
+        - Reference employee name and number
+        - State last working day (one month from today, February 23, 2026)
+        - State severance amount: KES 144,000 (payable within 5 days)
+        - Reference Kenya Employment Act compliance
+    assert:
+      - type: icontains
+        value: "144,000"
+        metric: Accuracy
+      - type: icontains
+        value: "John Kamau"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Formal termination letter: names employee, states redundancy reason, gives one-month notice, states KES 144k severance and 5-day payment timeline, references legal compliance. Professional and legally precise."
+        metric: Quality
+        weight: 2

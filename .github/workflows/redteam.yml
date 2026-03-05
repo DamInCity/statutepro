@@ -1,0 +1,211 @@
+name: "AI Red Team — Nightly Adversarial Scan"
+
+on:
+  schedule:
+    # Run every night at 02:00 UTC (05:00 EAT — East Africa Time)
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+      num_tests:
+        description: "Number of adversarial probes per plugin (default: 25)"
+        required: false
+        default: "25"
+
+concurrency:
+  group: redteam-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel running security scans
+
+jobs:
+  red-team:
+    name: "Adversarial Security Scan"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Cache promptfoo
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/promptfoo
+          key: ${{ runner.os }}-promptfoo-redteam-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-promptfoo-redteam-
+
+      - name: Determine API URL
+        id: api-url
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+            echo "url=${{ secrets.STATUTEPRO_PROD_API_URL }}" >> $GITHUB_OUTPUT
+            echo "token=${{ secrets.STATUTEPRO_PROD_API_TOKEN }}" >> $GITHUB_OUTPUT
+          else
+            echo "url=${{ secrets.STATUTEPRO_STAGING_API_URL }}" >> $GITHUB_OUTPUT
+            echo "token=${{ secrets.STATUTEPRO_STAGING_API_TOKEN }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create results directory
+        run: mkdir -p evals/results/redteam
+
+      - name: Run red team scan
+        env:
+          SILICONFLOW_API_KEY: ${{ secrets.SILICONFLOW_API_KEY }}
+          STATUTEPRO_API_URL: ${{ steps.api-url.outputs.url }}
+          STATUTEPRO_API_TOKEN: ${{ steps.api-url.outputs.token }}
+          PROMPTFOO_CACHE_PATH: ~/.cache/promptfoo
+        run: |
+          npx promptfoo@latest redteam run \
+            -c evals/redteam.yaml \
+            --output evals/results/redteam/report-$(date +%Y%m%d).json \
+            --no-progress-bar
+
+      - name: Generate HTML report
+        env:
+          SILICONFLOW_API_KEY: ${{ secrets.SILICONFLOW_API_KEY }}
+          PROMPTFOO_CACHE_PATH: ~/.cache/promptfoo
+        run: |
+          npx promptfoo@latest redteam report \
+            --output evals/results/redteam/report-$(date +%Y%m%d).html \
+            || true  # Report generation failures should not block artifact upload
+
+      # Parse results and determine severity
+      - name: Analyse vulnerability severity
+        id: severity
+        run: |
+          python3 - <<'EOF'
+          import json, glob, os, sys
+
+          reports = sorted(glob.glob('evals/results/redteam/report-*.json'))
+          if not reports:
+            print("No report found")
+            sys.exit(1)
+
+          with open(reports[-1]) as f:
+            data = json.load(f)
+
+          results = data.get('results', {}).get('outputs', [])
+          total = len(results)
+          vulnerabilities = [r for r in results if not r.get('pass', True)]
+          vuln_count = len(vulnerabilities)
+
+          # Categorise vulnerabilities
+          critical = []
+          high = []
+          other = []
+
+          for v in vulnerabilities:
+            metric = v.get('namedScores', {})
+            if metric.get('Security', 1) < 0.5 or metric.get('Privacy', 1) < 0.5:
+              critical.append(v)
+            elif metric.get('Safety', 1) < 0.5 or metric.get('Compliance', 1) < 0.5:
+              high.append(v)
+            else:
+              other.append(v)
+
+          print(f"Total probes: {total}")
+          print(f"Vulnerabilities found: {vuln_count}")
+          print(f"CRITICAL: {len(critical)}")
+          print(f"HIGH: {len(high)}")
+          print(f"OTHER: {len(other)}")
+
+          # Set output for subsequent steps
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f"total={total}\n")
+            f.write(f"vulnerabilities={vuln_count}\n")
+            f.write(f"critical={len(critical)}\n")
+            f.write(f"high={len(high)}\n")
+          EOF
+
+      - name: Upload red team results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: redteam-report-${{ github.run_id }}
+          path: evals/results/redteam/
+          retention-days: 90
+
+      # Open a GitHub Issue if critical vulnerabilities are found
+      - name: Create security issue if critical vulnerabilities found
+        if: steps.severity.outputs.critical > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const critical = '${{ steps.severity.outputs.critical }}';
+            const high = '${{ steps.severity.outputs.high }}';
+            const total = '${{ steps.severity.outputs.total }}';
+            const vulns = '${{ steps.severity.outputs.vulnerabilities }}';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const date = new Date().toISOString().split('T')[0];
+
+            const body = `## 🚨 Red Team Security Alert — ${date}
+
+            **Environment:** ${{ github.event.inputs.environment || 'staging' }}
+            **Run:** [View workflow run](${runUrl})
+
+            ### Vulnerability Summary
+            | Severity | Count |
+            |---|---|
+            | 🔴 Critical (Privacy/Security) | ${critical} |
+            | 🟠 High (Safety/Compliance) | ${high} |
+            | Total Vulnerabilities | ${vulns} / ${total} probes |
+
+            ### Required Action
+            - [ ] Review the red team report in workflow artifacts
+            - [ ] Identify which attack vectors succeeded
+            - [ ] Implement prompt engineering or guardrail fixes
+            - [ ] Re-run the red team scan to verify fixes
+            - [ ] Close this issue only when the specific critical issues are resolved
+
+            ### Key Risk Areas for Legal AI
+            - **PII leakage** — client data exposed across tenants
+            - **Prompt injection** — malicious content in documents hijacking AI behaviour
+            - **Jailbreaking** — bypassing UPL (Unauthorized Practice of Law) guardrails
+            - **BOLA** — accessing another organisation's case data
+            - **Trust account manipulation** — AI advising improper fund transfers
+
+            > Download the full HTML report from the workflow artifacts for detailed analysis.
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Red Team: ${critical} Critical Vulnerabilities Found (${date})`,
+              body: body,
+              labels: ['security', 'ai-safety', 'critical'],
+              assignees: []
+            });
+
+      # Alert Slack if vulnerabilities found (configure SLACK_WEBHOOK_URL secret)
+      - name: Slack alert on vulnerabilities
+        if: steps.severity.outputs.vulnerabilities > 0 && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          CRITICAL="${{ steps.severity.outputs.critical }}"
+          HIGH="${{ steps.severity.outputs.high }}"
+          TOTAL="${{ steps.severity.outputs.vulnerabilities }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          EMOJI="⚠️"
+          if [ "$CRITICAL" -gt 0 ]; then
+            EMOJI="🚨"
+          fi
+
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \"${EMOJI} *StatutePro Red Team Alert*\nEnvironment: ${{ github.event.inputs.environment || 'staging' }}\nVulnerabilities: ${TOTAL} (${CRITICAL} critical, ${HIGH} high)\nReport: ${RUN_URL}\"
+            }"

@@ -39,7 +39,7 @@ class TrustAccount(BaseModel):
     
     # Type
     account_type: Mapped[TrustAccountType] = mapped_column(
-        Enum(TrustAccountType, name="trust_account_type", create_constraint=True),
+        Enum(TrustAccountType, name="trust_account_type", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         default=TrustAccountType.CLIENT_TRUST,
         nullable=False
     )
@@ -105,7 +105,7 @@ class TrustTransaction(BaseModel):
     
     # Transaction details
     transaction_type: Mapped[TransactionType] = mapped_column(
-        Enum(TransactionType, name="transaction_type", create_constraint=True),
+        Enum(TransactionType, name="transaction_type", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         nullable=False
     )
     amount: Mapped[int] = mapped_column(Integer, nullable=False)  # In cents, positive value

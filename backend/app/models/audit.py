@@ -55,7 +55,7 @@ class AuditLog(BaseModel):
     
     # Action details
     action: Mapped[AuditAction] = mapped_column(
-        Enum(AuditAction, name="audit_action", create_constraint=True),
+        Enum(AuditAction, name="audit_action", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         index=True
     )

@@ -8,8 +8,12 @@ export interface User {
   last_name: string;
   phone?: string;
   title?: string;
-  role: 'admin' | 'partner' | 'associate' | 'paralegal' | 'staff' | 'readonly';
+  bio?: string;
+  role: 'owner' | 'admin' | 'partner' | 'associate' | 'paralegal' | 'staff' | 'readonly';
   is_active: boolean;
+  is_verified: boolean;
+  is_platform_admin: boolean;
+  organization_id?: string;
   hourly_rate?: number;
   created_at: string;
   updated_at: string;
@@ -41,8 +45,8 @@ export interface Matter {
   status: 'intake' | 'active' | 'pending' | 'on_hold' | 'closed' | 'archived';
   practice_area: string;
   billing_type: string;
-  hourly_rate?: number;
-  flat_fee?: number;
+  hourly_rate_override?: number;
+  budget_amount?: number;
   client_id: string;
   client?: Client;
   responsible_attorney_id?: string;
@@ -57,8 +61,8 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  status: 'pending' | 'in_progress' | 'review' | 'blocked' | 'completed' | 'cancelled';
-  priority: 'low' | 'normal' | 'high' | 'urgent';
+  status: 'todo' | 'in_progress' | 'review' | 'blocked' | 'completed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   category: string;
   due_date?: string;
   estimated_hours?: number;
@@ -162,12 +166,7 @@ export interface PaginatedResponse<T> {
 // Auth
 export const authApi = {
   login: async (email: string, password: string) => {
-    const formData = new FormData();
-    formData.append('username', email);
-    formData.append('password', password);
-    const { data } = await api.post('/auth/login', formData, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
+    const { data } = await api.post('/auth/login', { email, password });
     return data;
   },
   
@@ -331,6 +330,11 @@ export const invoicesApi = {
     return data;
   },
   
+  create: async (invoiceData: object) => {
+    const { data } = await api.post('/invoices', invoiceData);
+    return data;
+  },
+  
   summary: async () => {
     const { data } = await api.get('/invoices/summary');
     return data;
@@ -346,13 +350,21 @@ export interface TimeEntrySummary {
 }
 
 export const timeEntriesApi = {
-  list: async (params?: { page?: number; per_page?: number; matter_id?: string; user_id?: string; date?: string }) => {
-    const { data } = await api.get<PaginatedResponse<TimeEntry>>('/time-entries', { params });
+  list: async (params?: { limit?: number; per_page?: number; matter_id?: string; user_id?: string; date?: string; date_from?: string; date_to?: string }) => {
+    // Backend uses limit/date_from/date_to, normalize here
+    const { per_page, date, ...rest } = params || {};
+    const normalized: Record<string, unknown> = { ...rest };
+    if (per_page) normalized.limit = per_page;
+    if (date) normalized.date_from = date;
+    const { data } = await api.get<TimeEntry[]>('/time-entries', { params: normalized });
     return data;
   },
   
-  myEntries: async (params?: { page?: number; per_page?: number; start_date?: string; end_date?: string }) => {
-    const { data } = await api.get<PaginatedResponse<TimeEntry>>('/time-entries/my', { params });
+  myEntries: async (params?: { limit?: number; per_page?: number; start_date?: string; end_date?: string }) => {
+    const { per_page, ...rest } = params || {};
+    const normalized: Record<string, unknown> = { ...rest };
+    if (per_page) normalized.limit = per_page;
+    const { data } = await api.get<TimeEntry[]>('/time-entries/my', { params: normalized });
     return data;
   },
   
@@ -380,6 +392,103 @@ export const timeEntriesApi = {
   
   delete: async (id: string) => {
     await api.delete(`/time-entries/${id}`);
+  },
+};
+
+// Trust Accounts
+export interface TrustAccountBrief {
+  id: string;
+  account_name: string;
+  account_number: string;
+  bank_name: string;
+  account_type: string;
+  currency: string;
+  current_balance: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface TrustTransaction {
+  id: string;
+  transaction_type: string;
+  amount: number;
+  description: string;
+  reference_number: string;
+  transaction_date: string;
+  balance_after: number;
+  client?: { id: string; display_name: string };
+  matter?: { id: string; matter_number: string; name: string };
+}
+
+export const trustAccountsApi = {
+  list: async (params?: { is_active?: boolean; account_type?: string }) => {
+    const { data } = await api.get<TrustAccountBrief[]>('/trust-accounts', { params });
+    return data;
+  },
+
+  summary: async () => {
+    const { data } = await api.get('/trust-accounts/summary');
+    return data;
+  },
+
+  create: async (accountData: Partial<TrustAccountBrief>) => {
+    const { data } = await api.post('/trust-accounts', accountData);
+    return data;
+  },
+
+  getTransactions: async (id: string) => {
+    const { data } = await api.get(`/trust-accounts/${id}/transactions`);
+    return (data.transactions ?? data) as TrustTransaction[];
+  },
+
+  createTransaction: async (accountId: string, tx: Partial<TrustTransaction> & { amount: number }) => {
+    const { data } = await api.post(`/trust-accounts/${accountId}/transactions`, tx);
+    return data;
+  },
+};
+
+// AI
+export interface AIResponse {
+  response: string;
+}
+
+export const aiApi = {
+  completion: async (prompt: string, systemPrompt?: string, maxTokens?: number) => {
+    const { data } = await api.post<AIResponse>('/ai/completion', {
+      prompt, system_prompt: systemPrompt, max_tokens: maxTokens,
+    });
+    return data.response;
+  },
+
+  summarize: async (text: string, context?: string, maxLength?: 'concise' | 'detailed' | 'bullet_points') => {
+    const { data } = await api.post<AIResponse>('/ai/summarize', { text, context, max_length: maxLength });
+    return data.response;
+  },
+
+  draftEmail: async (subject: string, context: string, tone?: string, keyPoints?: string[]) => {
+    const { data } = await api.post<AIResponse>('/ai/draft-email', {
+      subject, context, tone, key_points: keyPoints,
+    });
+    return data.response;
+  },
+
+  suggestTimeDescription: async (activityType: string, matterName?: string, notes?: string) => {
+    const { data } = await api.post<AIResponse>('/ai/suggest-time-description', {
+      activity_type: activityType, matter_name: matterName, notes,
+    });
+    return data.response;
+  },
+
+  analyzeMatter: async (matterName: string, practiceArea: string, description: string, clientName?: string) => {
+    const { data } = await api.post<AIResponse>('/ai/analyze-matter', {
+      matter_name: matterName, practice_area: practiceArea, description, client_name: clientName,
+    });
+    return data.response;
+  },
+
+  chat: async (messages: Array<{ role: string; content: string }>, systemPrompt?: string) => {
+    const { data } = await api.post<AIResponse>('/ai/chat', { messages, system_prompt: systemPrompt });
+    return data.response;
   },
 };
 

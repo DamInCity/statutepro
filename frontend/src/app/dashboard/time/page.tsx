@@ -171,8 +171,8 @@ export default function TimeEntriesPage() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Get entries as array
-  const entries = entriesData?.entries || [];
+  // Get entries as array — backend returns a plain array
+  const entries: TimeEntry[] = Array.isArray(entriesData) ? entriesData : [];
   
   // Group entries by matter
   interface MatterGroup {

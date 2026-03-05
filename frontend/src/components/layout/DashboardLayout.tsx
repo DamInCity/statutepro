@@ -3,6 +3,7 @@
 import { useState, ReactNode } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import AIAssistant from './AIAssistant';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,7 +14,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="d-flex">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
       
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -30,6 +31,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </div>
+      <AIAssistant />
     </div>
   );
 }

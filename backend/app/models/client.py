@@ -45,12 +45,12 @@ class Client(BaseModel):
         nullable=False
     )
     client_type: Mapped[ClientType] = mapped_column(
-        Enum(ClientType, name="client_type", create_constraint=True),
+        Enum(ClientType, name="client_type", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         default=ClientType.INDIVIDUAL,
         nullable=False
     )
     status: Mapped[ClientStatus] = mapped_column(
-        Enum(ClientStatus, name="client_status", create_constraint=True),
+        Enum(ClientStatus, name="client_status", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         default=ClientStatus.ACTIVE,
         nullable=False
     )

@@ -14,7 +14,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 const STATUS_COLUMNS = [
-  { key: 'pending', label: 'To Do', color: 'secondary' },
+  { key: 'todo', label: 'To Do', color: 'secondary' },
   { key: 'in_progress', label: 'In Progress', color: 'primary' },
   { key: 'review', label: 'Review', color: 'warning' },
   { key: 'completed', label: 'Completed', color: 'success' },
@@ -41,7 +41,7 @@ export default function TasksPage() {
     title: '',
     description: '',
     matter_id: '',
-    priority: 'normal',
+    priority: 'medium',
     due_date: '',
     estimated_hours: '',
   });
@@ -91,7 +91,7 @@ export default function TasksPage() {
       title: '',
       description: '',
       matter_id: '',
-      priority: 'normal',
+      priority: 'medium',
       due_date: '',
       estimated_hours: '',
     });
@@ -105,7 +105,7 @@ export default function TasksPage() {
       matter_id: formData.matter_id || undefined,
       priority: formData.priority as Task['priority'],
       due_date: formData.due_date || undefined,
-      estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : undefined,
+      estimated_minutes: formData.estimated_hours ? Math.round(parseFloat(formData.estimated_hours) * 60) : undefined,
     });
   };
 

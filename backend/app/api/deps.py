@@ -81,7 +81,33 @@ def require_roles(*allowed_roles: UserRole):
     return role_checker
 
 
+async def require_platform_admin(
+    current_user: Annotated[User, Depends(get_current_active_user)]
+) -> User:
+    """Require user to be a platform admin (super admin)."""
+    if not current_user.is_platform_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform admin access required"
+        )
+    return current_user
+
+
+async def require_org_admin(
+    current_user: Annotated[User, Depends(get_current_active_user)]
+) -> User:
+    """Require user to be an organization admin or owner."""
+    if not current_user.is_org_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Organization admin access required"
+        )
+    return current_user
+
+
 # Common dependency aliases
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
 DBSession = Annotated[AsyncSession, Depends(get_db)]
 AdminUser = Annotated[User, Depends(require_roles(UserRole.ADMIN))]
+PlatformAdmin = Annotated[User, Depends(require_platform_admin)]
+OrgAdmin = Annotated[User, Depends(require_org_admin)]

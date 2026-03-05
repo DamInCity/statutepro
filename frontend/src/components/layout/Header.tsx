@@ -1,8 +1,9 @@
 'use client';
 
 import { Dropdown, Badge, Form, InputGroup } from 'react-bootstrap';
-import { FiBell, FiSearch, FiMenu } from 'react-icons/fi';
+import { FiBell, FiSearch, FiMenu, FiMoon, FiSun } from 'react-icons/fi';
 import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme/ThemeContext';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -10,34 +11,42 @@ interface HeaderProps {
 
 export default function Header({ onMenuToggle }: HeaderProps) {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="main-header">
       <div className="d-flex align-items-center gap-3">
-        <button 
-          className="btn btn-link d-lg-none p-0 text-dark"
+        <button
+          className="btn btn-link d-lg-none p-0 header-icon-btn"
           onClick={onMenuToggle}
         >
           <FiMenu size={24} />
         </button>
-        
-        <InputGroup style={{ width: '300px' }}>
-          <InputGroup.Text className="bg-light border-end-0">
-            <FiSearch className="text-muted" />
+
+        <InputGroup className="header-search" style={{ width: '300px' }}>
+          <InputGroup.Text>
+            <FiSearch />
           </InputGroup.Text>
           <Form.Control
             placeholder="Search matters, clients..."
-            className="bg-light border-start-0"
           />
         </InputGroup>
       </div>
       
       <div className="d-flex align-items-center gap-3">
+        <button
+          className="btn header-icon-btn"
+          onClick={toggleTheme}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? <FiSun size={18} /> : <FiMoon size={18} />}
+        </button>
+
         <Dropdown align="end">
-          <Dropdown.Toggle 
-            variant="light" 
-            className="position-relative rounded-circle p-2"
-            style={{ border: 'none' }}
+          <Dropdown.Toggle
+            variant="light"
+            className="position-relative rounded-circle p-2 header-icon-btn"
           >
             <FiBell size={20} />
             <Badge 
@@ -59,25 +68,23 @@ export default function Header({ onMenuToggle }: HeaderProps) {
               <p className="mb-0 small">Invoice #INV-2024-001 is overdue</p>
             </Dropdown.Item>
             <Dropdown.Divider />
-            <Dropdown.Item className="text-center text-primary">View all notifications</Dropdown.Item>
+            <Dropdown.Item className="text-center">View all notifications</Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
         
         <Dropdown align="end">
-          <Dropdown.Toggle 
+          <Dropdown.Toggle
             variant="light"
-            className="d-flex align-items-center gap-2"
-            style={{ border: 'none' }}
+            className="d-flex align-items-center gap-2 header-user-toggle"
           >
             <div 
-              className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-              style={{ width: '36px', height: '36px', fontSize: '0.875rem', fontWeight: 600 }}
+              className="rounded-circle d-flex align-items-center justify-content-center header-avatar"
             >
               {user?.first_name?.[0]}{user?.last_name?.[0]}
             </div>
             <div className="text-start d-none d-md-block">
               <div className="small fw-medium">{user?.first_name} {user?.last_name}</div>
-              <div className="small text-muted" style={{ textTransform: 'capitalize' }}>{user?.role}</div>
+              <div className="small header-role">{user?.role}</div>
             </div>
           </Dropdown.Toggle>
           <Dropdown.Menu>

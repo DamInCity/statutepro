@@ -69,13 +69,13 @@ class Matter(BaseModel):
     
     # Status & Type
     status: Mapped[MatterStatus] = mapped_column(
-        Enum(MatterStatus, name="matter_status", create_constraint=True),
+        Enum(MatterStatus, name="matter_status", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         default=MatterStatus.INTAKE,
         nullable=False,
         index=True
     )
     practice_area: Mapped[PracticeArea] = mapped_column(
-        Enum(PracticeArea, name="practice_area", create_constraint=True),
+        Enum(PracticeArea, name="practice_area", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         index=True
     )
@@ -108,7 +108,7 @@ class Matter(BaseModel):
     
     # Billing
     billing_type: Mapped[BillingType] = mapped_column(
-        Enum(BillingType, name="billing_type", create_constraint=True),
+        Enum(BillingType, name="billing_type", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         default=BillingType.HOURLY,
         nullable=False
     )

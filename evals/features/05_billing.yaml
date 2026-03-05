@@ -1,0 +1,274 @@
+# ============================================================================
+# Feature 05: Billing Time Entry Descriptions
+# Tests the /api/v1/ai/suggest-time-description endpoint.
+#
+# Key quality dimensions:
+# - Active voice
+# - 1-2 sentences maximum
+# - NO time quantities (hours, minutes) included
+# - Professional legal billing language
+# - Specific to the activity type and matter
+# - Appropriate for a client invoice (client will read this)
+#
+# Run: npx promptfoo eval -c evals/features/05_billing.yaml
+# ============================================================================
+
+description: "StatutePro — Billing Descriptions (Feature 05)"
+
+providers:
+  - id: openai:openai/gpt-oss-20b
+    label: "GPT-OSS-20B (production)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.4
+      max_tokens: 200
+
+  - id: openai:Qwen/Qwen3-235B-A22B
+    label: "Qwen3-235B (upgrade)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.4
+      max_tokens: 200
+
+prompts:
+  - label: "Billing Description Generator"
+    raw: |
+      [
+        {
+          "role": "system",
+          "content": "You are a legal billing specialist. Generate a clear, concise, professional time entry description suitable for a client invoice. Use active voice, be specific but brief (1-2 sentences). Do not include time amounts — just the description of work performed."
+        },
+        {
+          "role": "user",
+          "content": "Generate a professional billing description for: {{activity_type}}{{matter_line}}{{notes_line}}"
+        }
+      ]
+
+defaultTest:
+  vars:
+    matter_line: ""
+    notes_line: ""
+  assert:
+    # Zero-tolerance: absolutely no time quantities
+    - type: not-regex
+      value: "\\d+\\.?\\d*\\s*(hours?|hrs?|minutes?|mins?|hr\\b)"
+      metric: Format
+      weight: 3
+    # Must be concise (no more than 3 sentences)
+    - type: llm-rubric
+      value: "Output is 1-2 sentences maximum. Not a multi-paragraph response."
+      metric: Format
+      weight: 2
+    # Active voice check
+    - type: llm-rubric
+      value: "Written in active voice (e.g., 'Reviewed...', 'Drafted...', 'Attended...'). Does not use passive constructions like 'was reviewed' or 'was drafted'."
+      metric: Format
+    - type: latency
+      threshold: 8000
+      metric: Performance
+
+threshold: 0.90  # High threshold — billing accuracy directly impacts revenue
+
+tests:
+
+  # ── Document Review ───────────────────────────────────────────────────────
+
+  - description: "Contract review — basic"
+    vars:
+      activity_type: "document review"
+      matter_line: " for matter 'Mwangi Land Dispute'"
+      notes_line: "\nLawyer's rough notes: read through the title documents and survey maps"
+    assert:
+      - type: llm-rubric
+        value: "Professional billing entry describing review of title documents or survey maps in active voice. Uses specific language like 'Reviewed title documents and survey maps for [matter]' or similar."
+        metric: Quality
+
+  - description: "Contract review — complex discovery production"
+    vars:
+      activity_type: "document review"
+      matter_line: " for matter 'TechVentures v. CloudSolutions'"
+      notes_line: "\nLawyer's rough notes: went through 200-page discovery production, highlighted 3 smoking gun emails showing defendant knew about the breach"
+    assert:
+      - type: llm-rubric
+        value: "Describes reviewing discovery documents, identifying key evidence. Professional language (e.g., 'Reviewed discovery production and identified critical communications evidencing defendant's knowledge of contractual breach'). Does not include '200 pages' or specific counts unless professionally appropriate."
+        metric: Quality
+      - type: not-regex
+        value: "\\d+\\.?\\d*\\s*(hours?|hrs?)"
+        metric: Format
+        weight: 3
+
+  - description: "Contract review — NDA with redlines"
+    vars:
+      activity_type: "contract review and redlining"
+      matter_line: " for matter 'Apex Technologies NDA'"
+      notes_line: "\nLawyer's rough notes: reviewed their NDA draft, added our standard IP protection clauses, changed the governing law to Kenya, sent back to client"
+    assert:
+      - type: llm-rubric
+        value: "Describes NDA review and amendment — mentions redlining/revising, specific changes (IP, governing law), or returning to client. Professional billing vocabulary."
+        metric: Quality
+
+  # ── Drafting Activities ────────────────────────────────────────────────────
+
+  - description: "Drafted a legal letter — demand letter"
+    vars:
+      activity_type: "drafting legal correspondence"
+      matter_line: " for matter 'Thornton v. ABC Corp (Invoice Dispute)'"
+      notes_line: "\nLawyer's rough notes: wrote the demand letter to ABC Corp for the unpaid invoice, sent to partner for review"
+    assert:
+      - type: llm-rubric
+        value: "Describes drafting a demand letter or formal correspondence. Uses professional terminology. Mentions the drafting activity clearly."
+        metric: Quality
+
+  - description: "Drafted a court pleading — defence"
+    vars:
+      activity_type: "drafting court pleading"
+      matter_line: " for matter 'R v. Omari (Fraud Charges)'"
+      notes_line: "\nLawyer's rough notes: drafted the defence's response to the charge sheet, argued lack of criminal intent"
+    assert:
+      - type: llm-rubric
+        value: "Describes drafting a defence pleading, response to charges, or similar court document. Active voice, 1-2 sentences, professional."
+        metric: Quality
+
+  # ── Court Appearances ─────────────────────────────────────────────────────
+
+  - description: "Court appearance — interlocutory hearing"
+    vars:
+      activity_type: "court appearance"
+      matter_line: " for matter 'Greenfield v. Northern Developments'"
+      notes_line: "\nLawyer's rough notes: appeared before High Court Justice Njoroge, argued the injunction application, judge granted it"
+    assert:
+      - type: llm-rubric
+        value: "Describes court attendance and appearance before the High Court. Mentions the hearing type (injunction application) or outcome. Active voice."
+        metric: Quality
+      - type: llm-rubric
+        value: "Billing entry is appropriate for a client to read — professional, no casual language about judges or proceedings."
+        metric: Format
+
+  - description: "Court appearance — trial day"
+    vars:
+      activity_type: "trial attendance"
+      matter_line: " for matter 'Kamau v. Employers Ltd'"
+      notes_line: "\nLawyer's rough notes: full day in court, cross-examined 2 witnesses, presented closing arguments"
+    assert:
+      - type: llm-rubric
+        value: "Describes trial attendance, cross-examination of witnesses, and/or closing submissions. Professional trial advocacy language."
+        metric: Quality
+
+  # ── Client Meetings ────────────────────────────────────────────────────────
+
+  - description: "Client meeting — strategy discussion"
+    vars:
+      activity_type: "client meeting"
+      matter_line: " for matter 'TechVentures v. CloudSolutions'"
+      notes_line: "\nLawyer's rough notes: met with client James Chen, discussed settlement options and trial risks, decided to push for mediation first"
+    assert:
+      - type: llm-rubric
+        value: "Describes client consultation/conference regarding case strategy (settlement/mediation options). Does not reveal specific confidential strategy details in the billing description."
+        metric: Quality
+      - type: not-icontains
+        value: "push for"
+        metric: Format
+
+  - description: "Client meeting — initial intake consultation"
+    vars:
+      activity_type: "initial client consultation"
+      matter_line: " for matter 'New Client — Sarah Wanjiku Employment Matter'"
+      notes_line: "\nLawyer's rough notes: first meeting with new client, got all the facts, explained the process, advised on merits"
+    assert:
+      - type: llm-rubric
+        value: "Professional billing entry for an initial consultation/intake meeting. Describes obtaining client instructions and advising on matter. 1-2 sentences."
+        metric: Quality
+
+  # ── Research ──────────────────────────────────────────────────────────────
+
+  - description: "Legal research — statute"
+    vars:
+      activity_type: "legal research"
+      matter_line: " for matter 'Mombasa Exporters v. London Imports'"
+      notes_line: "\nLawyer's rough notes: researched LCIA arbitration rules and how Kenya enforces foreign arbitral awards under the New York Convention"
+    assert:
+      - type: llm-rubric
+        value: "Describes legal research on LCIA arbitration or enforcement of foreign awards. Professional research billing terminology."
+        metric: Quality
+
+  - description: "Legal research — case law"
+    vars:
+      activity_type: "case law research"
+      matter_line: " for matter 'Njeri Wrongful Dismissal'"
+      notes_line: "\nLawyer's rough notes: researched Kenya Court of Appeal decisions on procedural fairness in dismissal cases"
+    assert:
+      - type: llm-rubric
+        value: "Describes researching judicial authority or case law on procedural fairness/wrongful dismissal. Professional billing language."
+        metric: Quality
+
+  # ── Calls / Communications ────────────────────────────────────────────────
+
+  - description: "Telephone call with opposing counsel"
+    vars:
+      activity_type: "telephone conference"
+      matter_line: " for matter 'AcquiCo Acquisition'"
+      notes_line: "\nLawyer's rough notes: call with opposing lawyer to negotiate warranty provisions in the share purchase agreement"
+    assert:
+      - type: llm-rubric
+        value: "Describes a telephone conference or call with opposing counsel to negotiate deal terms. Professional."
+        metric: Quality
+
+  - description: "Email correspondence with client"
+    vars:
+      activity_type: "correspondence"
+      matter_line: " for matter 'Kamau Divorce Proceedings'"
+      notes_line: "\nLawyer's rough notes: sent email to client with update on custody hearing date, answered her questions about the process"
+    assert:
+      - type: llm-rubric
+        value: "Describes drafting and sending correspondence to client regarding case updates. Professional, concise."
+        metric: Quality
+
+  # ── Format Edge Cases ─────────────────────────────────────────────────────
+
+  - description: "[FORMAT] Should not include rough language from notes"
+    vars:
+      activity_type: "document review"
+      matter_line: " for matter 'Oduya Employment Dispute'"
+      notes_line: "\nLawyer's rough notes: holy moly the HR records are a mess, spent ages finding the termination letter, basically proves our case"
+    assert:
+      - type: not-icontains
+        value: "holy moly"
+        metric: Format
+      - type: not-icontains
+        value: "ages"
+        metric: Format
+      - type: not-icontains
+        value: "mess"
+        metric: Format
+      - type: llm-rubric
+        value: "Transforms informal/unprofessional notes into professional billing language. Does not reproduce the casual language from the notes."
+        metric: Format
+        weight: 2
+
+  - description: "[FORMAT] Very short activity — stays 1-2 sentences"
+    vars:
+      activity_type: "signing engagement letter"
+      matter_line: " for matter 'New Client Matter'"
+      notes_line: ""
+    assert:
+      - type: llm-rubric
+        value: "Single sentence describing the activity of executing/signing the engagement letter. Does not pad the response with unnecessary context."
+        metric: Format
+        weight: 2
+
+  - description: "[FORMAT] No time quantities regardless of notes mentioning hours"
+    vars:
+      activity_type: "document review"
+      matter_line: " for matter 'Mombasa Exporters v. London Imports'"
+      notes_line: "\nLawyer's rough notes: spent 4.5 hours reviewing the 350-page contract bundle"
+    assert:
+      - type: not-regex
+        value: "4\\.5|four.{0,5}hours?|350.{0,10}page"
+        metric: Format
+        weight: 3
+      - type: llm-rubric
+        value: "Describes reviewing a contract bundle without including time (4.5 hours) or document volume (350 pages) in the billing description."
+        metric: Format
+        weight: 2

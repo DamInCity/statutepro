@@ -55,19 +55,19 @@ class Task(BaseModel):
     
     # Status and priority
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, name="task_status", create_constraint=True),
+        Enum(TaskStatus, name="task_status", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         default=TaskStatus.TODO,
         nullable=False,
         index=True
     )
     priority: Mapped[TaskPriority] = mapped_column(
-        Enum(TaskPriority, name="task_priority", create_constraint=True),
+        Enum(TaskPriority, name="task_priority", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         default=TaskPriority.MEDIUM,
         nullable=False,
         index=True
     )
     category: Mapped[TaskCategory] = mapped_column(
-        Enum(TaskCategory, name="task_category", create_constraint=True),
+        Enum(TaskCategory, name="task_category", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         default=TaskCategory.OTHER,
         nullable=False
     )

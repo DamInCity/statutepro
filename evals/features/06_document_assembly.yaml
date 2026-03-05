@@ -1,0 +1,250 @@
+# ============================================================================
+# Feature 06: Document Assembly (Roadmap — Phase 2)
+# Defines EXPECTED BEHAVIOUR for the intelligent document assembly feature.
+# These tests document what the system SHOULD do when the feature is built.
+# They can also be run against the general chat endpoint to test current
+# capability before the dedicated endpoint is built.
+#
+# Use cases: NDA, employment agreement, SaaS contract, demand letter,
+# shareholder agreement, engagement letter, board resolution
+#
+# Run: npx promptfoo eval -c evals/features/06_document_assembly.yaml
+# ============================================================================
+
+description: "StatutePro — Document Assembly / Generation (Feature 06 — Roadmap)"
+
+providers:
+  - id: openai:openai/gpt-oss-20b
+    label: "GPT-OSS-20B (current capability)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.3
+      max_tokens: 3000
+
+  - id: openai:Qwen/Qwen3-235B-A22B
+    label: "Qwen3-235B (target for IDA)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.3
+      max_tokens: 3000
+
+prompts:
+  - label: "Document Assembly System"
+    raw: |
+      [
+        {
+          "role": "system",
+          "content": "You are a legal document assembly specialist for an international law firm. Generate professional legal document templates based on the provided parameters. Always include appropriate jurisdictional provisions. Add a disclaimer at the end noting the template requires review and execution by a qualified attorney before use. Use proper legal drafting conventions."
+        },
+        {
+          "role": "user",
+          "content": "Generate a {{document_type}} with the following parameters:\n{{parameters}}"
+        }
+      ]
+
+defaultTest:
+  assert:
+    # Every generated document must have an attorney-review disclaimer
+    - type: llm-rubric
+      value: "Output includes a disclaimer that the document template should be reviewed by a qualified attorney before use."
+      metric: Compliance
+      weight: 2
+    # Must be actual document content, not just a description
+    - type: llm-rubric
+      value: "Output is an actual document template with numbered sections/clauses, not just a description or outline of what a document should contain."
+      metric: Format
+      weight: 2
+    - type: latency
+      threshold: 30000
+      metric: Performance
+
+threshold: 0.82
+
+tests:
+
+  # ── NDA Templates ─────────────────────────────────────────────────────────
+
+  - description: "Mutual NDA — Kenya governing law"
+    vars:
+      document_type: "Mutual Non-Disclosure Agreement"
+      parameters: |
+        - Party A: Apex Technologies Ltd. (Kenya)
+        - Party B: Summit Ventures Inc. (Delaware, USA)
+        - Purpose: Evaluating a potential software development partnership
+        - Confidentiality term: 2 years from date of disclosure
+        - Governing law: Republic of Kenya
+        - Effective date: [DATE]
+    assert:
+      - type: icontains
+        value: "Apex Technologies"
+        metric: Accuracy
+      - type: icontains
+        value: "Summit Ventures"
+        metric: Accuracy
+      - type: icontains
+        value: "Kenya"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "NDA template contains: parties section, recitals/purpose, definition of confidential information, receiving party obligations, exceptions to confidentiality, term (2 years), governing law (Kenya), and signature blocks."
+        metric: Completeness
+        weight: 2
+
+  - description: "One-way NDA — software developer engaging contractor"
+    vars:
+      document_type: "One-Way Non-Disclosure Agreement"
+      parameters: |
+        - Disclosing Party: NairobiTech Ltd. (Kenya)
+        - Receiving Party: [CONTRACTOR NAME] (individual freelancer)
+        - Purpose: Software development engagement
+        - Scope: Source code, product roadmap, client data, technical architecture
+        - Term: 3 years from signing, surviving termination of engagement
+        - Governing law: Kenya
+    assert:
+      - type: icontains
+        value: "NairobiTech"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "One-way NDA clearly identifies the disclosing party (NairobiTech) and receiving party (contractor). Includes: specific scope of confidential information (source code, roadmap, client data, architecture), 3-year term with survival clause, and appropriate remedies provision."
+        metric: Completeness
+
+  # ── Employment Agreements ─────────────────────────────────────────────────
+
+  - description: "Employment agreement — senior associate attorney Kenya"
+    vars:
+      document_type: "Employment Agreement"
+      parameters: |
+        - Employer: Thornton & Associates, Advocates LLP
+        - Employee: [EMPLOYEE NAME]
+        - Position: Senior Associate Attorney
+        - Practice group: Corporate & Commercial
+        - Salary: KES [AMOUNT] per month
+        - Start date: [DATE]
+        - Probation: 6 months
+        - Notice: 3 months post-probation
+        - Annual leave: 21 working days
+        - Governing law: Republic of Kenya (Employment Act 2007)
+    assert:
+      - type: icontains
+        value: "Thornton & Associates"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Employment agreement template covers: parties, position/role, compensation, start date, probationary period (6 months), post-probation notice (3 months), annual leave (21 days), confidentiality obligation, and termination provisions. References Kenya Employment Act 2007."
+        metric: Completeness
+        weight: 2
+      - type: llm-rubric
+        value: "Includes signature blocks for both employer and employee. Includes a clause about compliance with Kenya Employment Act."
+        metric: Completeness
+
+  # ── Service / Commercial Agreements ───────────────────────────────────────
+
+  - description: "Legal services engagement letter"
+    vars:
+      document_type: "Client Engagement Letter"
+      parameters: |
+        - Law firm: Thornton & Associates, Advocates LLP
+        - Client: [CLIENT NAME]
+        - Matter: [MATTER DESCRIPTION]
+        - Billing type: Hourly rate at KES [RATE] per hour
+        - Estimated budget: KES [AMOUNT]
+        - Retainer: KES [AMOUNT] (held in client trust account)
+        - Conflict check: Completed — no conflicts identified
+        - Governing law: Kenya
+    assert:
+      - type: llm-rubric
+        value: "Engagement letter covers: scope of services, billing arrangement (hourly rate), retainer/trust account terms, conflict of interest disclosure, termination rights, confidentiality, client communication expectations, and file retention policy."
+        metric: Completeness
+        weight: 2
+      - type: icontains
+        value: "Thornton & Associates"
+        metric: Accuracy
+
+  - description: "SaaS subscription agreement"
+    vars:
+      document_type: "Software-as-a-Service Subscription Agreement"
+      parameters: |
+        - Provider: StatutePro Ltd.
+        - Customer: [LAW FIRM NAME]
+        - Product: StatutePro Legal Practice Management Platform
+        - Subscription tier: Professional (unlimited users)
+        - Fee: USD [AMOUNT] per month, billed annually
+        - Term: 12 months auto-renewing
+        - Uptime SLA: 99.5%
+        - Data ownership: Customer retains all rights to their data
+        - Data processing: GDPR compliant (EU customers)
+        - Governing law: [JURISDICTION]
+    assert:
+      - type: llm-rubric
+        value: "SaaS agreement covers: license grant, subscription fees and billing, uptime SLA with credits, data ownership (customer owns data), GDPR/data processing, acceptable use policy, term and renewal, termination, limitation of liability, and confidentiality."
+        metric: Completeness
+        weight: 2
+      - type: icontains
+        value: "StatutePro"
+        metric: Accuracy
+
+  # ── Court Documents ────────────────────────────────────────────────────────
+
+  - description: "Demand notice before legal action — Kenya High Court"
+    vars:
+      document_type: "Formal Demand Notice (Letter Before Action)"
+      parameters: |
+        - Claimant: [CLIENT NAME]
+        - Defendant: [DEFENDANT NAME]
+        - Claim amount: KES [AMOUNT]
+        - Basis of claim: Breach of supply contract
+        - Payment deadline: 14 days from date of notice
+        - Consequence: High Court proceedings without further notice
+        - Governing law: Kenya
+    assert:
+      - type: llm-rubric
+        value: "Formal demand letter includes: proper legal salutation, statement of claim and amount, contractual basis, 14-day payment deadline, clear consequence (High Court proceedings), and attorney signature block."
+        metric: Completeness
+
+  # ── Risk and Compliance Assertions ────────────────────────────────────────
+
+  - description: "[COMPLIANCE] Document does not misstate law"
+    vars:
+      document_type: "Simple Non-Disclosure Agreement"
+      parameters: |
+        - Party A: ABC Ltd (Kenya)
+        - Party B: XYZ Ltd (Kenya)
+        - Purpose: Business discussions
+        - Term: 1 year
+        - Governing law: Kenya
+    assert:
+      - type: llm-rubric
+        value: "NDA provisions are consistent with general contract law principles. Does not include provisions that are clearly unenforceable or contrary to public policy (e.g., perpetual confidentiality for general knowledge, waiver of all statutory rights)."
+        metric: Compliance
+        weight: 2
+
+  - description: "[COMPLIANCE] Employment agreement references applicable labour law"
+    vars:
+      document_type: "Employment Agreement"
+      parameters: |
+        - Employer: ABC Corp Ltd (Kenya)
+        - Employee: [NAME]
+        - Position: Accountant
+        - Salary: KES 150,000/month
+        - Governing law: Kenya
+    assert:
+      - type: llm-rubric
+        value: "Employment agreement references or is consistent with Kenya Employment Act 2007 requirements: minimum notice periods, statutory leave entitlements, termination procedures. Does not include provisions that would unlawfully strip employee of statutory rights."
+        metric: Compliance
+        weight: 2
+
+  - description: "[COMPLIANCE] Attorney review disclaimer present"
+    vars:
+      document_type: "Shareholders Agreement"
+      parameters: |
+        - Company: InnovateTech Ltd (Kenya)
+        - Shareholders: [SHAREHOLDER NAMES AND %]
+        - Board composition: [DETAILS]
+        - Dividend policy: [DETAILS]
+        - Transfer restrictions: Right of first refusal
+        - Governing law: Kenya
+    assert:
+      - type: llm-rubric
+        value: "Document prominently includes a disclaimer that this is a template requiring review by a qualified attorney and should not be used as-is without professional legal advice."
+        metric: Compliance
+        weight: 3

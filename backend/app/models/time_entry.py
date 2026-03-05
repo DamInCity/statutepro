@@ -37,7 +37,7 @@ class TimeEntry(BaseModel):
     
     # Billing
     status: Mapped[TimeEntryStatus] = mapped_column(
-        Enum(TimeEntryStatus, name="time_entry_status", create_constraint=True),
+        Enum(TimeEntryStatus, name="time_entry_status", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         default=TimeEntryStatus.DRAFT,
         nullable=False,
         index=True

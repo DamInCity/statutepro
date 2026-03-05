@@ -20,9 +20,11 @@ interface ClientFormData {
 
 const CLIENT_TYPES = [
   { value: 'individual', label: 'Individual', icon: FiUser },
-  { value: 'company', label: 'Company', icon: FiBriefcase },
+  { value: 'corporation', label: 'Corporation', icon: FiBriefcase },
   { value: 'government', label: 'Government', icon: FiBriefcase },
-  { value: 'ngo', label: 'NGO', icon: FiBriefcase },
+  { value: 'nonprofit', label: 'Non-Profit', icon: FiBriefcase },
+  { value: 'partnership', label: 'Partnership', icon: FiBriefcase },
+  { value: 'llc', label: 'LLC', icon: FiBriefcase },
 ];
 
 export default function ClientsPage() {
@@ -94,9 +96,8 @@ export default function ClientsPage() {
       client_type: formData.client_type,
       email: formData.email || undefined,
       phone: formData.phone || undefined,
-      address: formData.address || undefined,
-      id_number: formData.id_number || undefined,
-      tax_pin: formData.tax_pin || undefined,
+      address_line1: formData.address || undefined,
+      tax_id: formData.tax_pin || formData.id_number || undefined,
       notes: formData.notes || undefined,
     });
   };
@@ -184,7 +185,7 @@ export default function ClientsPage() {
           ) : (
             <>
               <Table responsive hover className="mb-0">
-                <thead className="bg-light">
+                <thead>
                   <tr>
                     <th>Client</th>
                     <th>Type</th>

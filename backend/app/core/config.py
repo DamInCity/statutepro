@@ -38,7 +38,15 @@ class Settings(BaseSettings):
     
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
-    
+
+    # SiliconFlow AI Service
+    SILICONFLOW_API_KEY: Optional[str] = None
+    SILICONFLOW_BASE_URL: str = "https://api.siliconflow.com/v1"
+    SILICONFLOW_MODEL: str = "openai/gpt-oss-20b"
+    SILICONFLOW_TIMEOUT: int = 30
+    SILICONFLOW_MAX_TOKENS: int = 4096
+    SILICONFLOW_TEMPERATURE: float = 0.7
+
     class Config:
         env_file = ".env"
         case_sensitive = True

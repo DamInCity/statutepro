@@ -14,6 +14,9 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - DEBUG=${DEBUG:-true}
       - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-in-production}
+      - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY}
+      - SILICONFLOW_BASE_URL=${SILICONFLOW_BASE_URL:-https://api.siliconflow.com/v1}
+      - SILICONFLOW_MODEL=${SILICONFLOW_MODEL:-openai/gpt-oss-20b}
     ports:
       - "8000:8000"
     volumes:

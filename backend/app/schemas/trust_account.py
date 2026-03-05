@@ -48,6 +48,8 @@ class TrustAccountBrief(BaseSchema):
     id: UUID
     account_name: str
     account_number: str
+    account_type: TrustAccountType
+    currency: str
     current_balance: int
     is_active: bool
 

@@ -22,6 +22,10 @@ from app.models.trust_account import (
 )
 from app.models.task import Task, TaskStatus, TaskPriority, TaskCategory
 from app.models.audit import AuditLog, AuditAction
+from app.models.organization import Organization, OrganizationType
+from app.models.subscription import Subscription, PlanTier, SubscriptionStatus, BillingInterval
+from app.models.token_usage import TokenUsage, TokenUsageAggregate, AIFeatureType, AIModel
+from app.models.currency import Currency, ExchangeRate, CurrencyConversionLog
 
 __all__ = [
     # Base
@@ -67,4 +71,21 @@ __all__ = [
     # Audit
     "AuditLog",
     "AuditAction",
+    # Organization & Multi-tenancy
+    "Organization",
+    "OrganizationType",
+    # Subscription
+    "Subscription",
+    "PlanTier",
+    "SubscriptionStatus",
+    "BillingInterval",
+    # Token Usage
+    "TokenUsage",
+    "TokenUsageAggregate",
+    "AIFeatureType",
+    "AIModel",
+    # Currency
+    "Currency",
+    "ExchangeRate",
+    "CurrencyConversionLog",
 ]

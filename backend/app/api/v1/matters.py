@@ -1,11 +1,11 @@
 """Matter (Case) management API endpoints."""
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 import random
 import string
 from datetime import datetime, date
 from fastapi import APIRouter, HTTPException, status, Query
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from sqlalchemy.orm import selectinload
 from app.api.deps import DBSession, CurrentUser
 from app.models.matter import Matter, MatterStatus, PracticeArea, BillingType
@@ -84,19 +84,19 @@ async def create_matter(
     return MatterResponse.model_validate(matter)
 
 
-@router.get("", response_model=List[MatterResponse])
+@router.get("", response_model=Dict[str, Any])
 async def list_matters(
     db: DBSession,
     current_user: CurrentUser,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=100),
     status: Optional[MatterStatus] = None,
     practice_area: Optional[PracticeArea] = None,
     client_id: Optional[UUID] = None,
     responsible_attorney_id: Optional[UUID] = None,
     search: Optional[str] = None
-) -> List[MatterResponse]:
-    """List matters with optional filtering."""
+) -> Dict[str, Any]:
+    """List matters with optional filtering, paginated."""
     
     query = select(Matter)
     
@@ -119,11 +119,23 @@ async def list_matters(
             )
         )
     
-    query = query.order_by(Matter.created_at.desc()).offset(skip).limit(limit)
+    # Count total
+    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
+    total = count_result.scalar_one()
+
+    skip = (page - 1) * per_page
+    query = query.order_by(Matter.created_at.desc()).offset(skip).limit(per_page)
     result = await db.execute(query)
     matters = result.scalars().all()
-    
-    return [MatterResponse.model_validate(m) for m in matters]
+
+    pages = (total + per_page - 1) // per_page
+    return {
+        "matters": [MatterResponse.model_validate(m) for m in matters],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages,
+    }
 
 
 @router.get("/{matter_id}", response_model=MatterDetail)

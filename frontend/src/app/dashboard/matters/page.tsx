@@ -16,7 +16,8 @@ const PRACTICE_AREAS = [
   { value: 'employment', label: 'Employment' },
   { value: 'intellectual_property', label: 'IP' },
   { value: 'tax', label: 'Tax' },
-  { value: 'estate_planning', label: 'Estate Planning' },
+  { value: 'immigration', label: 'Immigration' },
+  { value: 'banking', label: 'Banking' },
   { value: 'other', label: 'Other' },
 ];
 
@@ -33,8 +34,9 @@ interface MatterFormData {
   practice_area: string;
   description: string;
   billing_type: string;
-  hourly_rate: string;
-  flat_fee: string;
+  open_date: string;
+  hourly_rate_override: string;
+  budget_amount: string;
 }
 
 export default function MattersPage() {
@@ -54,8 +56,9 @@ export default function MattersPage() {
     practice_area: 'litigation',
     description: '',
     billing_type: 'hourly',
-    hourly_rate: '',
-    flat_fee: '',
+    open_date: new Date().toISOString().split('T')[0],
+    hourly_rate_override: '',
+    budget_amount: '',
   });
 
   const { data: mattersData, isLoading } = useQuery({
@@ -99,8 +102,9 @@ export default function MattersPage() {
       practice_area: 'litigation',
       description: '',
       billing_type: 'hourly',
-      hourly_rate: '',
-      flat_fee: '',
+      open_date: new Date().toISOString().split('T')[0],
+      hourly_rate_override: '',
+      budget_amount: '',
     });
   };
 
@@ -112,8 +116,9 @@ export default function MattersPage() {
       practice_area: formData.practice_area,
       description: formData.description || undefined,
       billing_type: formData.billing_type,
-      hourly_rate: formData.hourly_rate ? parseInt(formData.hourly_rate) * 100 : undefined,
-      flat_fee: formData.flat_fee ? parseInt(formData.flat_fee) * 100 : undefined,
+      open_date: formData.open_date,
+      hourly_rate_override: formData.hourly_rate_override ? parseInt(formData.hourly_rate_override) * 100 : undefined,
+      budget_amount: formData.budget_amount ? parseInt(formData.budget_amount) * 100 : undefined,
     });
   };
 
@@ -376,6 +381,17 @@ export default function MattersPage() {
               </Col>
               <Col md={4}>
                 <Form.Group>
+                  <Form.Label>Open Date *</Form.Label>
+                  <Form.Control
+                    required
+                    type="date"
+                    value={formData.open_date}
+                    onChange={(e) => setFormData({ ...formData, open_date: e.target.value })}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group>
                   <Form.Label>Billing Type *</Form.Label>
                   <Form.Select
                     required
@@ -383,9 +399,10 @@ export default function MattersPage() {
                     onChange={(e) => setFormData({ ...formData, billing_type: e.target.value })}
                   >
                     <option value="hourly">Hourly</option>
-                    <option value="flat_fee">Flat Fee</option>
+                    <option value="fixed">Fixed Fee</option>
                     <option value="contingency">Contingency</option>
-                    <option value="retainer">Retainer</option>
+                    <option value="pro_bono">Pro Bono</option>
+                    <option value="hybrid">Hybrid</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -395,21 +412,21 @@ export default function MattersPage() {
                     <Form.Label>Hourly Rate (KES)</Form.Label>
                     <Form.Control
                       type="number"
-                      value={formData.hourly_rate}
-                      onChange={(e) => setFormData({ ...formData, hourly_rate: e.target.value })}
+                      value={formData.hourly_rate_override}
+                      onChange={(e) => setFormData({ ...formData, hourly_rate_override: e.target.value })}
                       placeholder="e.g., 5000"
                     />
                   </Form.Group>
                 </Col>
               )}
-              {formData.billing_type === 'flat_fee' && (
+              {formData.billing_type === 'fixed' && (
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Flat Fee (KES)</Form.Label>
+                    <Form.Label>Fixed Fee (KES)</Form.Label>
                     <Form.Control
                       type="number"
-                      value={formData.flat_fee}
-                      onChange={(e) => setFormData({ ...formData, flat_fee: e.target.value })}
+                      value={formData.budget_amount}
+                      onChange={(e) => setFormData({ ...formData, budget_amount: e.target.value })}
                       placeholder="e.g., 100000"
                     />
                   </Form.Group>

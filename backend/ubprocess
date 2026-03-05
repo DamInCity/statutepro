@@ -1,0 +1,20 @@
+      typname       
+--------------------
+ audit_action
+ billing_type
+ client_status
+ client_type
+ document_category
+ invoice_status
+ matter_status
+ payment_method
+ practice_area
+ task_category
+ task_priority
+ task_status
+ time_entry_status
+ transaction_type
+ trust_account_type
+ user_role
+(16 rows)
+

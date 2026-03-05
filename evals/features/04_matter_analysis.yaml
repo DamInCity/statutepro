@@ -1,0 +1,267 @@
+# ============================================================================
+# Feature 04: Matter Analysis
+# Tests the /api/v1/ai/analyze-matter endpoint.
+#
+# Key quality dimensions:
+# - All 4 sections present: risks, next steps, timeline, documents
+# - Practice-area appropriate analysis
+# - Actionable recommendations
+# - Does not give binding legal advice (appropriate caveats)
+# - Handles all major practice areas in the PracticeArea enum
+#
+# Run: npx promptfoo eval -c evals/features/04_matter_analysis.yaml
+# ============================================================================
+
+description: "StatutePro — Matter Analysis (Feature 04)"
+
+providers:
+  - id: openai:openai/gpt-oss-20b
+    label: "GPT-OSS-20B (production)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.3
+      max_tokens: 1500
+
+  - id: openai:Qwen/Qwen3-235B-A22B
+    label: "Qwen3-235B (upgrade)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.3
+      max_tokens: 1500
+
+prompts:
+  - label: "Matter Strategist"
+    raw: |
+      [
+        {
+          "role": "system",
+          "content": "You are a senior legal strategist. Analyse the given matter and provide: 1) Key risks and issues, 2) Recommended immediate next steps, 3) Timeline considerations, 4) Standard documents typically needed. Be practical and actionable."
+        },
+        {
+          "role": "user",
+          "content": "Analyse this legal matter:\nMatter: {{matter_name}}\nPractice Area: {{practice_area}}\nClient: {{client_name}}\nDescription: {{description}}"
+        }
+      ]
+
+# Reusable assertion: all 4 sections must be present
+assertionTemplates:
+  allFourSections:
+    type: llm-rubric
+    value: "Response is structured with all 4 sections clearly identifiable: 1) Key risks/issues, 2) Recommended immediate next steps, 3) Timeline considerations, 4) Standard documents needed."
+    metric: Completeness
+    weight: 2
+
+defaultTest:
+  assert:
+    - $ref: "#/assertionTemplates/allFourSections"
+    - type: latency
+      threshold: 20000
+      metric: Performance
+
+threshold: 0.85
+
+tests:
+
+  # ── Commercial Litigation ─────────────────────────────────────────────────
+
+  - description: "Commercial breach of SaaS contract — force majeure defence"
+    vars:
+      matter_name: "TechVentures Ltd v. CloudSolutions Inc."
+      practice_area: "Commercial Litigation"
+      client_name: "TechVentures Ltd"
+      description: >
+        Client entered a 3-year SaaS contract. Vendor failed to deliver key features for
+        6 months and is in material breach. Client has suffered USD 2M in losses. Vendor
+        now claims force majeure due to COVID-related disruptions (3 years ago). Client
+        wants to terminate the contract and recover damages.
+    assert:
+      - type: llm-rubric
+        value: "Addresses: validity of force majeure defence (temporal issues — COVID was 3 years ago), breach analysis, damages quantification strategy, evidence preservation, and contract termination procedure."
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Recommends at least 3 concrete immediate actions (e.g., issue formal termination notice, preserve all communications, engage expert witness on damages, send letter before action)."
+        metric: Quality
+
+  - description: "Property dispute — adverse possession claim"
+    vars:
+      matter_name: "Mwangi Land Dispute (LR No. 5678/9)"
+      practice_area: "Real Estate"
+      client_name: "Joseph Mwangi"
+      description: >
+        Client has occupied and maintained a piece of land (LR No. 5678/9) in Nakuru for
+        22 years. He has no title deed. A third party, Northern Properties Ltd., has recently
+        fenced the land claiming ownership via a title registered in 2020. Client paid rates
+        for the land for 15+ years. Client wants to claim ownership.
+    assert:
+      - type: llm-rubric
+        value: "Discusses adverse possession doctrine, the significance of 22-year occupation, rate payment records as evidence, validity of the 2020 title registration, and land registry search recommendations."
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Documents listed include: land registry search, payment receipts/bank statements for rates, surveyor's report, witness statements, and photographs of occupation."
+        metric: Completeness
+
+  # ── Employment Law ────────────────────────────────────────────────────────
+
+  - description: "Wrongful dismissal — procedural fairness"
+    vars:
+      matter_name: "Njeri Wrongful Dismissal Claim"
+      practice_area: "Employment Law"
+      client_name: "Grace Njeri"
+      description: >
+        Client was dismissed as Senior Accountant after 8 years of service. Employer cited
+        misconduct (alleged financial irregularities) but conducted no formal disciplinary
+        hearing and gave only 1 week notice. Client has no prior disciplinary record.
+        Client has witnesses and performance review records showing excellent performance.
+    assert:
+      - type: llm-rubric
+        value: "Identifies: lack of due process (no disciplinary hearing), inadequate notice period for 8-year employee, employment statute requirements in Kenya (Employment Act 2007). Mentions unfair termination vs. wrongful dismissal distinction."
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Next steps include: gathering evidence (performance reviews, payslips, termination letter), computing applicable compensation, and identifying the relevant forum (Employment & Labour Relations Court in Kenya)."
+        metric: Completeness
+
+  # ── Corporate / M&A ───────────────────────────────────────────────────────
+
+  - description: "Corporate acquisition — due diligence phase"
+    vars:
+      matter_name: "AcquiCo Ltd Acquisition of TargetTech Ltd"
+      practice_area: "Corporate"
+      client_name: "AcquiCo Ltd"
+      description: >
+        Client (AcquiCo Ltd) wishes to acquire 100% of shares in TargetTech Ltd, a Nairobi-based
+        software company with 45 employees. Preliminary valuation: KES 350M. Letter of Intent has
+        been signed. Deal timeline: target close in 90 days. Key risk flagged: TargetTech has a
+        pending tax assessment for KES 45M from KRA.
+    assert:
+      - type: icontains
+        value: "due diligence"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Addresses: pending KRA tax assessment risk (tax indemnification clause, escrow), IP ownership verification, employment contracts (transfer of undertakings), regulatory approvals, and share purchase agreement structure."
+        metric: Completeness
+        weight: 2
+      - type: llm-rubric
+        value: "Documents include at minimum: Share Purchase Agreement, due diligence checklist, tax clearance certificate, board resolutions, disclosure letter, and warranties/indemnities schedule."
+        metric: Completeness
+
+  # ── Intellectual Property ─────────────────────────────────────────────────
+
+  - description: "Trademark infringement — competitor using similar mark"
+    vars:
+      matter_name: "InnovateTech Ltd Trademark Infringement v. CopyCat Solutions"
+      practice_area: "Intellectual Property"
+      client_name: "InnovateTech Ltd"
+      description: >
+        Client holds registered trademark "CloudEdge" (KE-TM-2019-4521) in Class 42 (software
+        services). Competitor CopyCat Solutions has launched a product called "CloudEdge Pro"
+        and is running online ads using the term "CloudEdge". Client is losing market share.
+        Infringement has been ongoing for 4 months.
+    assert:
+      - type: llm-rubric
+        value: "Covers: trademark infringement analysis (confusion test), evidence collection strategy (screenshots, ads, market survey), interim injunction considerations, damages/profits claim, and cease and desist vs. immediate litigation decision."
+        metric: Completeness
+        weight: 2
+      - type: llm-rubric
+        value: "Mentions both litigation track (KECOBO/High Court) and ADR options. Notes that 4-month delay does not typically bar action but may affect interim relief."
+        metric: Accuracy
+
+  # ── Family Law ────────────────────────────────────────────────────────────
+
+  - description: "Contested divorce with minor children"
+    vars:
+      matter_name: "Kamau Divorce Proceedings"
+      practice_area: "Family Law"
+      client_name: "Alice Kamau"
+      description: >
+        Client (wife) seeks divorce from husband after 12 years of marriage. Two minor children
+        aged 8 and 6. Husband is contesting custody and claiming the matrimonial home (purchased
+        during marriage in joint names). Client is the primary caregiver and is employed. Husband
+        has higher income. Evidence of emotional abuse documented in counsellor's notes.
+    assert:
+      - type: llm-rubric
+        value: "Addresses: best interests of children standard for custody, matrimonial property division (joint assets), financial support/maintenance, protection orders (given abuse evidence), and counsellor notes admissibility."
+        metric: Completeness
+        weight: 2
+      - type: llm-rubric
+        value: "Sensitive in approach — acknowledges emotional nature of family proceedings. Recommends documenting abuse evidence carefully. Mentions custody arrangement options (sole, joint)."
+        metric: Quality
+
+  # ── Criminal Defence ──────────────────────────────────────────────────────
+
+  - description: "Criminal defence — fraud charges"
+    vars:
+      matter_name: "R v. Hassan Omari — Obtaining by False Pretences"
+      practice_area: "Criminal"
+      client_name: "Hassan Omari (defendant)"
+      description: >
+        Client (accused) is charged with obtaining KES 5M by false pretences from three
+        investors. He claims the investors knew the risk and agreed to speculative terms.
+        He has no prior criminal record. He has been in custody for 3 days pending bail
+        application. Trial date is 6 months away. There is CCTV footage and WhatsApp messages
+        as prosecution exhibits.
+    assert:
+      - type: llm-rubric
+        value: "Immediate next steps include: urgent bail application (client in custody), reviewing charge sheet, preserving defence evidence, and advising client to exercise right to silence."
+        metric: Completeness
+        weight: 2
+      - type: llm-rubric
+        value: "Discusses: elements of the offence (false representation, intent, reliance), potential defences (investors' knowledge of risk, speculative agreement), and evidence strategy re: CCTV and WhatsApp messages."
+        metric: Accuracy
+
+  # ── Immigration ──────────────────────────────────────────────────────────
+
+  - description: "Work permit application — skilled migrant"
+    vars:
+      matter_name: "Ravi Patel Work Permit Application (Kenya)"
+      practice_area: "Immigration"
+      client_name: "Ravi Patel"
+      description: >
+        Client is an Indian national with 15 years experience as a software engineer. He has
+        received a job offer from NairobiTech Ltd. (a licensed Kenyan company). The company
+        wants to sponsor his Class G work permit. Client currently on a visitor pass that
+        expires in 30 days. Timeline: employer needs him to start in 60 days.
+    assert:
+      - type: llm-rubric
+        value: "Covers: Class G work permit requirements, employer obligations (evidence that role cannot be filled by Kenyan), urgency given 30-day visitor pass, DCI clearance requirements, and temporary work authorization options."
+        metric: Completeness
+        weight: 2
+
+  # ── Multi-jurisdiction ────────────────────────────────────────────────────
+
+  - description: "Cross-border commercial dispute — Kenya and UK"
+    vars:
+      matter_name: "Mombasa Exporters Ltd v. London Imports PLC"
+      practice_area: "Commercial Litigation"
+      client_name: "Mombasa Exporters Ltd"
+      description: >
+        Client (Kenya) sold goods worth USD 800,000 to a UK buyer. UK buyer refused delivery
+        and claims goods were non-conforming. Contract had arbitration clause specifying London
+        Court of International Arbitration (LCIA). Client is in Kenya and wants to recover payment.
+        Goods have been returned to Mombasa port. Alternative: client is open to settlement.
+    assert:
+      - type: llm-rubric
+        value: "Addresses: LCIA arbitration procedure, Kenyan enforcement of foreign arbitral awards (New York Convention), goods inspection/expert report to counter non-conformity claim, interim attachment of assets, and settlement negotiation strategy."
+        metric: Completeness
+        weight: 2
+      - type: llm-rubric
+        value: "Identifies the practical challenge of cross-border enforcement and discusses cost-benefit of arbitration vs. negotiated settlement for a USD 800k claim."
+        metric: Quality
+
+  # ── Output Quality Gate ──────────────────────────────────────────────────
+
+  - description: "[QUALITY] Response is actionable, not generic boilerplate"
+    vars:
+      matter_name: "Standard Breach of Contract"
+      practice_area: "Commercial Litigation"
+      client_name: "ABC Ltd"
+      description: "Client entered a supply contract. Supplier failed to deliver goods on time causing losses."
+    assert:
+      - type: llm-rubric
+        value: "Response is specific and actionable — not just generic 'consult an attorney' statements. Contains concrete steps, specific document types, and realistic timeline guidance even for a simple commercial dispute."
+        metric: Quality
+        weight: 2
+      - type: llm-rubric
+        value: "Response is more than 200 words and covers all 4 required sections with substance, not just headers."
+        metric: Completeness

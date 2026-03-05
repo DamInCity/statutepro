@@ -1,0 +1,365 @@
+# ============================================================================
+# Feature 02: Legal Document Summarisation
+# Tests the /api/v1/ai/summarize endpoint for accuracy, completeness, format.
+#
+# Key quality dimensions:
+# - Does NOT hallucinate provisions not in the source text
+# - Correctly extracts: parties, dates, obligations, risks, deadlines
+# - Respects output format (concise vs. detailed vs. bullet points)
+# - Handles different document types (NDA, employment, court orders, leases, etc.)
+#
+# Run: npx promptfoo eval -c evals/features/02_summarization.yaml
+# ============================================================================
+
+description: "StatutePro — Document Summarisation (Feature 02)"
+
+providers:
+  - id: openai:openai/gpt-oss-20b
+    label: "GPT-OSS-20B (production)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.2
+      max_tokens: 800
+
+  - id: openai:Qwen/Qwen3-235B-A22B
+    label: "Qwen3-235B (upgrade)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.2
+      max_tokens: 800
+
+prompts:
+  - label: "Legal Document Summariser"
+    raw: |
+      [
+        {
+          "role": "system",
+          "content": "You are a legal document analyst for an international law firm. Extract key legal provisions, obligations, dates, and risks clearly and accurately. {{format_instruction}}"
+        },
+        {
+          "role": "user",
+          "content": "Please summarise the following legal text:\n\n{{text}}"
+        }
+      ]
+
+defaultTest:
+  vars:
+    format_instruction: "Provide a concise 3-5 sentence summary."
+  assert:
+    - type: latency
+      threshold: 15000
+      metric: Performance
+
+threshold: 0.85
+
+tests:
+
+  # ── Mutual NDA ────────────────────────────────────────────────────────────
+
+  - description: "Mutual NDA — parties, purpose, term, governing law"
+    vars:
+      text: |
+        MUTUAL NON-DISCLOSURE AGREEMENT
+
+        This Agreement is entered into as of January 15, 2025, by and between Apex Technologies
+        Ltd., a company incorporated in Kenya ("Party A"), and Summit Ventures Inc., a Delaware
+        corporation ("Party B"). Each party may disclose confidential and proprietary information
+        in connection with evaluating a potential software development partnership (the "Purpose").
+        The receiving party shall: (a) hold all Confidential Information in strict confidence;
+        (b) not disclose the Confidential Information to any third party without prior written
+        consent; (c) use it solely for the Purpose. This Agreement expires on January 14, 2027,
+        unless either party provides 30 days' written notice of termination. Governing law:
+        Republic of Kenya.
+    assert:
+      - type: icontains
+        value: "Apex Technologies"
+        metric: Accuracy
+      - type: icontains
+        value: "Summit Ventures"
+        metric: Accuracy
+      - type: icontains
+        value: "2027"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Summary accurately identifies: both parties (Apex Technologies Ltd. Kenya and Summit Ventures Inc. Delaware), the purpose (software development partnership evaluation), the term (expires January 2027), confidentiality obligations, and Kenyan governing law. Concise, no fabricated provisions."
+        metric: Completeness
+        weight: 2
+
+  - description: "NDA — bullet point format request"
+    vars:
+      format_instruction: "Summarise as a structured bullet-point list of key provisions and obligations."
+      text: |
+        MUTUAL NON-DISCLOSURE AGREEMENT
+
+        This Agreement is entered into as of January 15, 2025, by and between Apex Technologies
+        Ltd., a company incorporated in Kenya ("Party A"), and Summit Ventures Inc., a Delaware
+        corporation ("Party B"). Each party may disclose confidential and proprietary information
+        in connection with evaluating a potential software development partnership (the "Purpose").
+        The receiving party shall: (a) hold all Confidential Information in strict confidence;
+        (b) not disclose the Confidential Information to any third party without prior written
+        consent; (c) use it solely for the Purpose. This Agreement expires on January 14, 2027.
+        Governing law: Republic of Kenya.
+    assert:
+      - type: llm-rubric
+        value: "Output is formatted as a bullet-point list (uses bullet symbols like -, *, or •). Each provision is listed as a separate bullet point. Not written as prose paragraphs."
+        metric: Format
+        weight: 2
+      - type: icontains
+        value: "Apex Technologies"
+        metric: Accuracy
+
+  # ── Employment Agreement ──────────────────────────────────────────────────
+
+  - description: "Employment agreement — key terms and critical dates"
+    vars:
+      text: |
+        EMPLOYMENT AGREEMENT
+
+        This Employment Agreement is entered into on March 1, 2025, between Thornton &
+        Associates, Advocates LLP ("Employer") and Michael Oduya ("Employee").
+
+        POSITION: Senior Associate Attorney, Corporate Practice Group.
+        COMPENSATION: Base salary of KES 450,000 per month, payable monthly in arrears.
+        ANNUAL REVIEW: Compensation subject to annual performance review.
+        START DATE: April 1, 2025.
+        PROBATIONARY PERIOD: The first six (6) months shall constitute a probationary period
+        during which either party may terminate with 14 days' notice.
+        NOTICE: After probation, either party may terminate with three (3) months' written
+        notice, or payment in lieu thereof.
+        TERMINATION FOR CAUSE: Employer may terminate immediately for misconduct, fraud,
+        or breach of professional ethics without notice.
+        NON-COMPETE: Employee agrees not to practise law within Nairobi County for 12 months
+        following termination.
+        GOVERNING LAW: Republic of Kenya.
+    assert:
+      - type: icontains
+        value: "Michael Oduya"
+        metric: Accuracy
+      - type: icontains
+        value: "450,000"
+        metric: Accuracy
+      - type: icontains
+        value: "April"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Identifies: employee (Michael Oduya), employer (Thornton & Associates), position (Senior Associate), salary (KES 450k/month), start date (April 1 2025), 6-month probation, 3-month notice period, non-compete (12 months, Nairobi County)."
+        metric: Completeness
+        weight: 2
+
+  - description: "Employment agreement — flag the non-compete risk"
+    vars:
+      format_instruction: "Provide a detailed summary covering all key points, including any risky or unusual provisions."
+      text: |
+        EMPLOYMENT AGREEMENT
+
+        This Employment Agreement is entered into on March 1, 2025, between Thornton &
+        Associates, Advocates LLP ("Employer") and Michael Oduya ("Employee").
+        COMPENSATION: KES 450,000 per month.
+        START DATE: April 1, 2025.
+        NON-COMPETE: Employee agrees not to practise law within Nairobi County for
+        12 months following termination of employment.
+        INTELLECTUAL PROPERTY: All work product, research, and client relationships
+        developed during employment belong exclusively to the Employer in perpetuity.
+        GOVERNING LAW: Republic of Kenya.
+    assert:
+      - type: llm-rubric
+        value: "Identifies the non-compete clause as a notable or risky provision. Mentions the geographic restriction (Nairobi County) and 12-month duration. Notes the broad IP assignment clause covering client relationships."
+        metric: Completeness
+      - type: llm-rubric
+        value: "Flags at least one provision that may be potentially problematic or requires legal review (non-compete enforceability, perpetual IP assignment, etc.)"
+        metric: Quality
+
+  # ── Court Orders / Legal Proceedings ──────────────────────────────────────
+
+  - description: "High Court injunction — identify restraint, deadlines, parties"
+    vars:
+      text: |
+        IN THE HIGH COURT OF KENYA AT NAIROBI — CIVIL DIVISION
+        CASE NO. HCC/123/2024
+
+        Between: GREENFIELD PROPERTIES LTD (Plaintiff) v. NORTHERN DEVELOPMENTS PLC (Defendant)
+
+        ORDER (dated 25 November 2024 — HON. JUSTICE A. NJOROGE)
+
+        1. The Defendant is RESTRAINED from transferring, selling, charging, or disposing of
+           the property LR No. 1234/5 Westlands, Nairobi, pending the hearing of the main suit.
+        2. The Plaintiff shall file and serve the main suit within 21 days of this Order.
+        3. The Defendant shall file a response within 14 days of service of the main suit.
+        4. Costs of this application shall be in the cause.
+    assert:
+      - type: icontains
+        value: "21"
+        metric: Accuracy
+      - type: icontains
+        value: "14"
+        metric: Accuracy
+      - type: icontains
+        value: "Greenfield"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Accurately summarises: the parties (Greenfield Properties v. Northern Developments), the injunction (property disposal restraint on LR 1234/5), the 21-day deadline to file main suit, and the 14-day response deadline. Clearly identifies the compliance deadlines."
+        metric: Completeness
+        weight: 2
+
+  - description: "Court order — detailed format with all deadlines"
+    vars:
+      format_instruction: "Summarise as a structured bullet-point list of key provisions and obligations."
+      text: |
+        CONSENT ORDER — HIGH COURT OF KENYA
+        CASE: HCC/456/2024 — KAMAU v. EMPLOYERS LTD
+        DATE: 10 February 2025
+
+        BY CONSENT of the parties:
+        1. Defendant to pay Plaintiff KES 850,000 in full and final settlement.
+        2. Payment to be made within 30 days (by 12 March 2025).
+        3. If payment not made by due date, judgment to be entered for KES 1,000,000.
+        4. Upon payment, Plaintiff to file Notice of Withdrawal within 7 days.
+        5. Each party to bear own costs.
+    assert:
+      - type: icontains
+        value: "850,000"
+        metric: Accuracy
+      - type: icontains
+        value: "March 2025"
+        metric: Accuracy
+      - type: icontains
+        value: "1,000,000"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Bullet-point list clearly shows: settlement amount (KES 850k), payment deadline (March 12 2025), consequences of non-payment (KES 1M judgment), and the 7-day withdrawal obligation."
+        metric: Completeness
+
+  # ── Commercial Contracts ──────────────────────────────────────────────────
+
+  - description: "SaaS service agreement — key commercial terms"
+    vars:
+      text: |
+        SOFTWARE-AS-A-SERVICE AGREEMENT
+
+        This Agreement is entered into on 1 February 2025, between CloudSolutions Inc.
+        ("Provider") and TechVentures Ltd. ("Customer").
+
+        SERVICES: Provider will make the CloudOps Platform available to Customer.
+        TERM: 36 months from the Commencement Date (1 February 2025 to 31 January 2028).
+        FEES: USD 25,000 per month, billed annually in advance (USD 300,000/year).
+        SLA: 99.9% uptime. If uptime falls below 99%, Customer receives a 10% credit.
+        TERMINATION FOR CAUSE: Either party may terminate with 30 days' notice following
+        a material breach that remains uncured for 30 days.
+        LIMITATION OF LIABILITY: Provider's total liability shall not exceed 3 months' fees.
+        GOVERNING LAW: Delaware, USA.
+    assert:
+      - type: icontains
+        value: "25,000"
+        metric: Accuracy
+      - type: icontains
+        value: "2028"
+        metric: Accuracy
+      - type: icontains
+        value: "99.9"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Identifies key commercial terms: parties, 36-month term (Feb 2025 to Jan 2028), monthly fee ($25k/USD), 99.9% SLA with 10% credit remedy, 30-day cure period for breach, limitation of liability (3 months fees), Delaware governing law."
+        metric: Completeness
+        weight: 2
+
+  # ── Anti-Hallucination Tests ───────────────────────────────────────────────
+
+  - description: "[ANTI-HALLUCINATION] Does not add provisions not in text — simple contract"
+    vars:
+      text: |
+        SIMPLE SERVICE AGREEMENT
+
+        This Agreement is between ABC Consulting Ltd. ("Consultant") and XYZ Corp. ("Client").
+        Services: Business strategy consulting.
+        Fee: USD 10,000 per month.
+        Term: 12 months from 1 March 2025.
+        Payment: Due within 30 days of invoice.
+    assert:
+      - type: not-icontains
+        value: "penalty"
+        metric: Accuracy
+      - type: not-icontains
+        value: "liquidated damages"
+        metric: Accuracy
+      - type: not-icontains
+        value: "non-compete"
+        metric: Accuracy
+      - type: not-icontains
+        value: "intellectual property"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Summary contains ONLY information present in the source text. Does NOT add penalty clauses, liquidated damages, termination provisions, or IP clauses that are not in the original text."
+        metric: Accuracy
+        weight: 3
+
+  - description: "[ANTI-HALLUCINATION] Does not invent specific legal citations"
+    vars:
+      text: |
+        EMPLOYMENT AGREEMENT (KENYA)
+
+        This agreement is governed by the Employment Act of Kenya. The Employee is entitled
+        to annual leave as provided by law. Either party may terminate this agreement in
+        accordance with the applicable statutory notice periods.
+    assert:
+      - type: llm-rubric
+        value: "Summary references only what is in the text (Employment Act, annual leave, statutory notice). Does NOT fabricate specific section numbers, specific leave day counts, or specific notice periods not stated in the text."
+        metric: Accuracy
+        weight: 2
+
+  # ── Multi-language / International ────────────────────────────────────────
+
+  - description: "Summarise contract in French (Francophone Africa scenario)"
+    vars:
+      text: |
+        ACCORD DE CONFIDENTIALITÉ MUTUELLE
+
+        Cet accord est conclu le 1er janvier 2025 entre TechSolutions SARL («Partie A»)
+        et InnovateCo SA («Partie B»). Les parties souhaitent évaluer un partenariat
+        commercial potentiel. Chaque partie peut divulguer des informations confidentielles
+        à l'autre partie. Les informations confidentielles doivent être gardées secrètes
+        pendant une période de trois (3) ans à compter de la date de divulgation.
+        La loi applicable est celle de la République de Côte d'Ivoire.
+    assert:
+      - type: icontains
+        value: "TechSolutions"
+        metric: Accuracy
+      - type: icontains
+        value: "InnovateCo"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Correctly summarises the French NDA in English: identifies both parties, 3-year confidentiality term, business partnership evaluation purpose, and Côte d'Ivoire governing law."
+        metric: Accuracy
+
+  # ── Lease Agreement ───────────────────────────────────────────────────────
+
+  - description: "Commercial lease — rent, term, key tenant obligations"
+    vars:
+      format_instruction: "Provide a detailed summary covering all key points."
+      text: |
+        COMMERCIAL LEASE AGREEMENT
+
+        LANDLORD: Westlands Properties Ltd.
+        TENANT: Thornton & Associates, Advocates LLP.
+        PREMISES: Suite 5B, Westlands Court, Nairobi (380 sq. metres).
+        TERM: 3 years from 1 April 2025 to 31 March 2028.
+        RENT: KES 285,000 per month, payable in advance on the 1st of each month.
+        RENT REVIEW: Rent to be reviewed annually at a rate not exceeding 10% per year.
+        DEPOSIT: 3 months' rent (KES 855,000) payable on signing.
+        USE: Office use for legal practice only.
+        ALTERATIONS: Tenant shall not make structural alterations without prior written consent.
+        BREAK CLAUSE: Either party may terminate after 18 months with 3 months' written notice.
+    assert:
+      - type: icontains
+        value: "285,000"
+        metric: Accuracy
+      - type: icontains
+        value: "855,000"
+        metric: Accuracy
+      - type: icontains
+        value: "2028"
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Covers: parties, 380sqm premises location, 3-year term (April 2025–March 2028), monthly rent (KES 285k), 3-month deposit (KES 855k), annual 10% rent review cap, legal use restriction, structural alteration restriction, and 18-month break clause with 3-month notice."
+        metric: Completeness

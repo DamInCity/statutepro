@@ -1,0 +1,11 @@
+                                         List of data types
+ Schema |   Name    | Internal name | Size | Elements  |  Owner   | Access privileges | Description 
+--------+-----------+---------------+------+-----------+----------+-------------------+-------------
+ public | user_role | user_role     | 4    | admin    +| postgres |                   | 
+        |           |               |      | partner  +|          |                   | 
+        |           |               |      | associate+|          |                   | 
+        |           |               |      | paralegal+|          |                   | 
+        |           |               |      | staff    +|          |                   | 
+        |           |               |      | readonly  |          |                   | 
+(1 row)
+

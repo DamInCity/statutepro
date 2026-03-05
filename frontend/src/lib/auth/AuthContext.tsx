@@ -50,8 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     try {
       const response = await authApi.login(email, password);
-      setAccessToken(response.access_token);
-      setRefreshToken(response.refresh_token);
+      setAccessToken(response.tokens.access_token);
+      setRefreshToken(response.tokens.refresh_token);
       
       const userData = await authApi.me();
       setUser(userData);

@@ -1,5 +1,5 @@
 """Client management API endpoints."""
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 import random
 import string
@@ -54,17 +54,17 @@ async def create_client(
     return ClientResponse.model_validate(client)
 
 
-@router.get("", response_model=List[ClientResponse])
+@router.get("", response_model=Dict[str, Any])
 async def list_clients(
     db: DBSession,
     current_user: CurrentUser,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=100),
     status: Optional[ClientStatus] = None,
     client_type: Optional[ClientType] = None,
     search: Optional[str] = None
-) -> List[ClientResponse]:
-    """List clients with optional filtering."""
+) -> Dict[str, Any]:
+    """List clients with optional filtering, paginated."""
     
     query = select(Client)
     
@@ -83,11 +83,23 @@ async def list_clients(
             )
         )
     
-    query = query.order_by(Client.created_at.desc()).offset(skip).limit(limit)
+    # Count total
+    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
+    total = count_result.scalar_one()
+    
+    skip = (page - 1) * per_page
+    query = query.order_by(Client.created_at.desc()).offset(skip).limit(per_page)
     result = await db.execute(query)
     clients = result.scalars().all()
     
-    return [ClientResponse.model_validate(c) for c in clients]
+    pages = (total + per_page - 1) // per_page
+    return {
+        "clients": [ClientResponse.model_validate(c) for c in clients],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages,
+    }
 
 
 @router.get("/{client_id}", response_model=ClientResponse)

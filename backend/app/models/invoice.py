@@ -58,7 +58,7 @@ class Invoice(BaseModel):
     
     # Status
     status: Mapped[InvoiceStatus] = mapped_column(
-        Enum(InvoiceStatus, name="invoice_status", create_constraint=True),
+        Enum(InvoiceStatus, name="invoice_status", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         default=InvoiceStatus.DRAFT,
         nullable=False,
         index=True
@@ -129,6 +129,10 @@ class InvoiceLineItem(BaseModel):
         ForeignKey("time_entries.id", ondelete="SET NULL"),
         nullable=True
     )
+    time_entry: Mapped[Optional["TimeEntry"]] = relationship(
+        "TimeEntry",
+        back_populates="invoice_line_items"
+    )
     
     # Line item details
     description: Mapped[str] = mapped_column(Text, nullable=False)
@@ -176,7 +180,7 @@ class Payment(BaseModel):
     amount: Mapped[int] = mapped_column(Integer, nullable=False)  # In cents
     payment_date: Mapped[date] = mapped_column(Date, nullable=False)
     payment_method: Mapped[PaymentMethod] = mapped_column(
-        Enum(PaymentMethod, name="payment_method", create_constraint=True),
+        Enum(PaymentMethod, name="payment_method", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
         nullable=False
     )
     reference_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

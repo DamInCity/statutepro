@@ -1,0 +1,202 @@
+# ============================================================================
+# Feature 09: Multi-language Support
+# StatutePro targets international law firms — particularly East Africa
+# (Kenya, Tanzania, Uganda), Southeast Asia, and Francophone Africa.
+# The AI must handle queries in Swahili, French, Arabic, and other languages,
+# and produce output in the appropriate language or bilingual format.
+#
+# Run: npx promptfoo eval -c evals/features/09_multilingual.yaml
+# ============================================================================
+
+description: "StatutePro — Multi-language Support (Feature 09)"
+
+providers:
+  - id: openai:openai/gpt-oss-20b
+    label: "GPT-OSS-20B (production)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.4
+      max_tokens: 1000
+
+  - id: openai:Qwen/Qwen3-235B-A22B
+    label: "Qwen3-235B (target — 100+ languages)"
+    config:
+      apiBaseUrl: https://api.siliconflow.com/v1
+      apiKey: "{{env.SILICONFLOW_API_KEY}}"
+      temperature: 0.4
+      max_tokens: 1000
+
+prompts:
+  - label: "Multilingual Legal Assistant"
+    raw: |
+      [
+        {
+          "role": "system",
+          "content": "You are a helpful AI assistant embedded in StatutePro, a legal practice management system. Help lawyers with drafting emails, summarising documents, billing descriptions, deadline tracking, and platform usage. Respond in the same language as the user's query unless instructed otherwise. Be concise and practical. Do not provide specific legal advice."
+        },
+        {
+          "role": "user",
+          "content": "{{query}}"
+        }
+      ]
+
+defaultTest:
+  assert:
+    - type: latency
+      threshold: 15000
+      metric: Performance
+
+threshold: 0.80
+
+tests:
+
+  # ── Swahili (East Africa — Kenya, Tanzania, Uganda) ────────────────────────
+
+  - description: "Swahili — basic platform navigation"
+    vars:
+      query: "Habari, ninalitaka kujua jinsi ya kuongeza mteja mpya kwenye mfumo."
+    assert:
+      - type: llm-rubric
+        value: "Responds in Swahili (not English). Provides clear instructions for adding a new client in the system. Language is fluent and natural, not machine-translated."
+        metric: Quality
+        weight: 2
+
+  - description: "Swahili — billing question"
+    vars:
+      query: "Nawezaje kutengeneza ankara kwa kazi niliyofanya wiki hii?"
+    assert:
+      - type: llm-rubric
+        value: "Responds in fluent Swahili explaining how to create/generate an invoice for work completed. Natural Swahili phrasing appropriate for professional context."
+        metric: Quality
+
+  - description: "Swahili — legal document summary request"
+    vars:
+      query: |
+        Tafadhali fupisha makubaliano haya kwa Kiswahili:
+
+        MKATABA WA HUDUMA
+        Makubaliano haya yameingiwa tarehe 1 Machi 2025, kati ya ABC Ltd ("Mtoa Huduma")
+        na XYZ Corp ("Mteja"). Mtoa Huduma atatoa huduma za ushauri wa biashara.
+        Malipo: KES 50,000 kwa mwezi. Muda: miaka 2 kuanzia tarehe ya makubaliano.
+        Sheria inayotumika: Kenya.
+    assert:
+      - type: llm-rubric
+        value: "Responds in Swahili, accurately summarising the service agreement: parties (ABC Ltd and XYZ Corp), service type (business consulting), fee (KES 50,000/month), 2-year term, Kenyan law."
+        metric: Accuracy
+        weight: 2
+
+  - description: "Code-switching — Swahili query with English legal terms"
+    vars:
+      query: "Shida yangu ni kwamba client wangu hawakuandika witness statement. Nifanye nini?"
+    assert:
+      - type: llm-rubric
+        value: "Handles natural Swahili-English code-switching (common in East African legal practice). Responds in a mix of Swahili and English OR in clear Swahili, advising on how to handle missing witness statements."
+        metric: Quality
+
+  # ── French (Francophone Africa — Côte d'Ivoire, DRC, Senegal, Cameroon) ───
+
+  - description: "French — platform navigation"
+    vars:
+      query: "Bonjour, comment puis-je ajouter un nouveau client dans le système?"
+    assert:
+      - type: llm-rubric
+        value: "Responds in French. Provides clear instructions for adding a new client. Fluent professional French."
+        metric: Quality
+
+  - description: "French — document summarisation"
+    vars:
+      query: |
+        Veuillez résumer ce contrat en français:
+
+        CONTRAT DE PRESTATION DE SERVICES
+
+        Ce contrat est conclu le 1er février 2025 entre TechSolutions SARL («Prestataire»)
+        et InnovateCo SA («Client»). Le Prestataire fournira des services de développement
+        logiciel. Honoraires: 5 000 USD par mois. Durée: 12 mois. Loi applicable: Côte d'Ivoire.
+        Clause de non-concurrence: Le Prestataire s'engage à ne pas travailler pour des
+        concurrents directs pendant 6 mois après la résiliation du contrat.
+    assert:
+      - type: llm-rubric
+        value: "Responds in French, accurately summarising: parties (TechSolutions and InnovateCo), service type (software development), fee ($5,000/month), 12-month term, Côte d'Ivoire law, and the 6-month non-compete clause."
+        metric: Accuracy
+        weight: 2
+
+  - description: "French — billing description generation"
+    vars:
+      query: "Générez une description professionnelle pour une entrée de temps: révision d'un contrat de vente pour le dossier 'Achat ABC Corp'. Notes: relu le contrat de 80 pages, identifié des clauses risquées."
+    assert:
+      - type: llm-rubric
+        value: "Responds in French with a professional 1-2 sentence billing description for contract review. Active voice, professional legal billing language in French, no time quantities."
+        metric: Quality
+
+  # ── Arabic (Middle East, North Africa) ────────────────────────────────────
+
+  - description: "Arabic — basic query"
+    vars:
+      query: "مرحباً، كيف يمكنني إضافة عميل جديد في النظام؟"
+    assert:
+      - type: llm-rubric
+        value: "Responds in Arabic. Provides instructions for adding a new client. Language is fluent and professional, with proper right-to-left text conventions."
+        metric: Quality
+
+  - description: "Arabic — contract summary"
+    vars:
+      query: |
+        من فضلك لخص هذا العقد:
+
+        اتفاقية خدمات استشارية
+        أُبرمت هذه الاتفاقية في 1 يناير 2025 بين شركة الاستشارات الخليجية ("المورد")
+        وشركة تقنية الشرق الأوسط ("العميل"). تقديم خدمات استشارية في مجال تكنولوجيا المعلومات.
+        الرسوم: 20,000 درهم شهرياً. المدة: سنة واحدة. القانون المطبق: قانون الإمارات.
+    assert:
+      - type: llm-rubric
+        value: "Responds in Arabic with an accurate summary of the consulting agreement: parties, IT consulting services, AED 20,000/month fee, 1-year term, UAE law."
+        metric: Accuracy
+
+  # ── Portuguese (Mozambique, Angola) ───────────────────────────────────────
+
+  - description: "Portuguese — basic helpdesk query"
+    vars:
+      query: "Olá, como posso criar uma nova pasta de processo para um cliente existente?"
+    assert:
+      - type: llm-rubric
+        value: "Responds in Portuguese (either European or Brazilian, both acceptable for Africa context). Provides instructions for creating a new matter/case for an existing client."
+        metric: Quality
+
+  # ── Language Detection Edge Cases ─────────────────────────────────────────
+
+  - description: "Mixed language — English question with French name"
+    vars:
+      query: "I need to draft an email to Monsieur Jean-Pierre Dubois about his case status. Can you help?"
+    assert:
+      - type: llm-rubric
+        value: "Responds in English (the language of the query). Offers to help draft the email. Handles the French name correctly."
+        metric: Quality
+
+  - description: "Request for translation — legal term"
+    vars:
+      query: "How do you say 'statute of limitations' in Swahili? I need to explain it to my client."
+    assert:
+      - type: llm-rubric
+        value: "Provides the Swahili equivalent (something like 'muda wa kuwasilisha madai' or explains the concept in Swahili since there may not be a single direct term). Helpful for a lawyer communicating with a Swahili-speaking client."
+        metric: Quality
+
+  - description: "Legal document summary — non-English contract, English output requested"
+    vars:
+      query: |
+        Please summarise this French contract in ENGLISH:
+
+        ACCORD DE PARTENARIAT
+        Cet accord est conclu entre Alpha SARL et Beta SA.
+        Objet: développer conjointement une application mobile.
+        Partage des bénéfices: 50/50.
+        Durée: 24 mois.
+        Loi applicable: France.
+    assert:
+      - type: llm-rubric
+        value: "Responds in English (as requested) with accurate summary: Alpha and Beta partnership, joint mobile app development, 50/50 profit share, 24-month term, French law."
+        metric: Accuracy
+      - type: llm-rubric
+        value: "Output is in English, not French, honouring the explicit request to summarise 'in English'."
+        metric: Format
