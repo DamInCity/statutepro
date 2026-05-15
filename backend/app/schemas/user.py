@@ -23,7 +23,6 @@ class UserCreate(UserBase):
     """Schema for creating a new user."""
     
     password: str = Field(..., min_length=8, max_length=128)
-    organization_id: Optional[UUID] = None
 
 
 class UserUpdate(BaseSchema):
@@ -37,7 +36,6 @@ class UserUpdate(BaseSchema):
     role: Optional[UserRole] = None
     hourly_rate: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
-    organization_id: Optional[UUID] = None
 
 
 class UserResponse(UserBase, TimestampSchema):
@@ -46,8 +44,6 @@ class UserResponse(UserBase, TimestampSchema):
     id: UUID
     is_active: bool
     is_verified: bool
-    is_platform_admin: bool = False
-    organization_id: Optional[UUID] = None
     
     @property
     def full_name(self) -> str:

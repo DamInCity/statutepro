@@ -1,33 +1,4 @@
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: legalcms_backend
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER:-legalcms}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-legalcms_dev_password}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=${POSTGRES_DB:-legalcms}
-      - REDIS_URL=redis://redis:6379/0
-      - DEBUG=${DEBUG:-true}
-      - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-in-production}
-      - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY}
-      - SILICONFLOW_BASE_URL=${SILICONFLOW_BASE_URL:-https://api.siliconflow.com/v1}
-      - SILICONFLOW_MODEL=${SILICONFLOW_MODEL:-openai/gpt-oss-20b}
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
   postgres:
     image: postgres:15-alpine
     container_name: legalcms_postgres

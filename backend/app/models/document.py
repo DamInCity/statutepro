@@ -41,7 +41,7 @@ class Document(BaseModel):
     # Metadata
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     category: Mapped[DocumentCategory] = mapped_column(
-        Enum(DocumentCategory, name="document_category", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
+        Enum(DocumentCategory, name="document_category", create_constraint=True),
         default=DocumentCategory.OTHER,
         nullable=False,
         index=True

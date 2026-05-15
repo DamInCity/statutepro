@@ -12,8 +12,6 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.document import Document
     from app.models.time_entry import TimeEntry
-    from app.models.invoice import Invoice
-    from app.models.task import Task
 
 
 class MatterStatus(str, enum.Enum):
@@ -69,13 +67,13 @@ class Matter(BaseModel):
     
     # Status & Type
     status: Mapped[MatterStatus] = mapped_column(
-        Enum(MatterStatus, name="matter_status", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
+        Enum(MatterStatus, name="matter_status", create_constraint=True),
         default=MatterStatus.INTAKE,
         nullable=False,
         index=True
     )
     practice_area: Mapped[PracticeArea] = mapped_column(
-        Enum(PracticeArea, name="practice_area", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
+        Enum(PracticeArea, name="practice_area", create_constraint=True),
         nullable=False,
         index=True
     )
@@ -108,7 +106,7 @@ class Matter(BaseModel):
     
     # Billing
     billing_type: Mapped[BillingType] = mapped_column(
-        Enum(BillingType, name="billing_type", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
+        Enum(BillingType, name="billing_type", create_constraint=True),
         default=BillingType.HOURLY,
         nullable=False
     )
@@ -136,15 +134,6 @@ class Matter(BaseModel):
     )
     time_entries: Mapped[List["TimeEntry"]] = relationship(
         "TimeEntry",
-        back_populates="matter",
-        cascade="all, delete-orphan"
-    )
-    invoices: Mapped[List["Invoice"]] = relationship(
-        "Invoice",
-        back_populates="matter"
-    )
-    tasks: Mapped[List["Task"]] = relationship(
-        "Task",
         back_populates="matter",
         cascade="all, delete-orphan"
     )

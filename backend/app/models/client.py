@@ -8,7 +8,6 @@ from app.models.base import BaseModel
 if TYPE_CHECKING:
     from app.models.matter import Matter
     from app.models.contact import Contact
-    from app.models.invoice import Invoice
 
 
 class ClientType(str, enum.Enum):
@@ -45,12 +44,12 @@ class Client(BaseModel):
         nullable=False
     )
     client_type: Mapped[ClientType] = mapped_column(
-        Enum(ClientType, name="client_type", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
+        Enum(ClientType, name="client_type", create_constraint=True),
         default=ClientType.INDIVIDUAL,
         nullable=False
     )
     status: Mapped[ClientStatus] = mapped_column(
-        Enum(ClientStatus, name="client_status", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
+        Enum(ClientStatus, name="client_status", create_constraint=True),
         default=ClientStatus.ACTIVE,
         nullable=False
     )
@@ -95,11 +94,6 @@ class Client(BaseModel):
     )
     contacts: Mapped[List["Contact"]] = relationship(
         "Contact",
-        back_populates="client",
-        cascade="all, delete-orphan"
-    )
-    invoices: Mapped[List["Invoice"]] = relationship(
-        "Invoice",
         back_populates="client",
         cascade="all, delete-orphan"
     )

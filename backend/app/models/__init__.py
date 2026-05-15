@@ -6,26 +6,16 @@ from app.models.matter import Matter, MatterStatus, BillingType, PracticeArea
 from app.models.contact import Contact
 from app.models.document import Document, DocumentCategory
 from app.models.time_entry import TimeEntry, TimeEntryStatus
-from app.models.invoice import (
-    Invoice,
-    InvoiceStatus,
-    InvoiceLineItem,
-    Payment,
-    PaymentMethod
-)
-from app.models.trust_account import (
-    TrustAccount,
-    TrustAccountType,
-    TrustTransaction,
-    TransactionType,
-    ClientTrustLedger
-)
 from app.models.task import Task, TaskStatus, TaskPriority, TaskCategory
 from app.models.audit import AuditLog, AuditAction
+from app.models.invoice import Invoice, InvoiceStatus, InvoiceLineItem, Payment, PaymentMethod
+from app.models.currency import Currency, ExchangeRate, CurrencyConversionLog
 from app.models.organization import Organization, OrganizationType
 from app.models.subscription import Subscription, PlanTier, SubscriptionStatus, BillingInterval
 from app.models.token_usage import TokenUsage, TokenUsageAggregate, AIFeatureType, AIModel
-from app.models.currency import Currency, ExchangeRate, CurrencyConversionLog
+from app.models.trust_account import (
+    TrustAccount, TrustAccountType, TrustTransaction, TransactionType, ClientTrustLedger
+)
 
 __all__ = [
     # Base
@@ -51,18 +41,6 @@ __all__ = [
     # Time Entry
     "TimeEntry",
     "TimeEntryStatus",
-    # Invoice
-    "Invoice",
-    "InvoiceStatus",
-    "InvoiceLineItem",
-    "Payment",
-    "PaymentMethod",
-    # Trust Account
-    "TrustAccount",
-    "TrustAccountType",
-    "TrustTransaction",
-    "TransactionType",
-    "ClientTrustLedger",
     # Task
     "Task",
     "TaskStatus",
@@ -71,7 +49,17 @@ __all__ = [
     # Audit
     "AuditLog",
     "AuditAction",
-    # Organization & Multi-tenancy
+    # Invoice
+    "Invoice",
+    "InvoiceStatus",
+    "InvoiceLineItem",
+    "Payment",
+    "PaymentMethod",
+    # Currency
+    "Currency",
+    "ExchangeRate",
+    "CurrencyConversionLog",
+    # Organization
     "Organization",
     "OrganizationType",
     # Subscription
@@ -84,8 +72,10 @@ __all__ = [
     "TokenUsageAggregate",
     "AIFeatureType",
     "AIModel",
-    # Currency
-    "Currency",
-    "ExchangeRate",
-    "CurrencyConversionLog",
+    # Trust Account
+    "TrustAccount",
+    "TrustAccountType",
+    "TrustTransaction",
+    "TransactionType",
+    "ClientTrustLedger",
 ]

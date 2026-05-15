@@ -1,6 +1,6 @@
 """Time Entry model for billing and time tracking."""
 import enum
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from datetime import date
 from sqlalchemy import String, Text, Enum, Date, Integer, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
@@ -10,7 +10,6 @@ from app.models.base import BaseModel
 if TYPE_CHECKING:
     from app.models.matter import Matter
     from app.models.user import User
-    from app.models.invoice import InvoiceLineItem
 
 
 class TimeEntryStatus(str, enum.Enum):
@@ -37,7 +36,7 @@ class TimeEntry(BaseModel):
     
     # Billing
     status: Mapped[TimeEntryStatus] = mapped_column(
-        Enum(TimeEntryStatus, name="time_entry_status", create_constraint=True, values_callable=lambda x: [e.value for e in x]),
+        Enum(TimeEntryStatus, name="time_entry_status", create_constraint=True),
         default=TimeEntryStatus.DRAFT,
         nullable=False,
         index=True
@@ -63,10 +62,10 @@ class TimeEntry(BaseModel):
     )
     user: Mapped["User"] = relationship("User", back_populates="time_entries")
     
-    # Invoice line items (when billed)
-    invoice_line_items: Mapped[List["InvoiceLineItem"]] = relationship(
-        "InvoiceLineItem",
-        back_populates="time_entry"
+    # Invoice reference (when billed)
+    invoice_id: Mapped[Optional[UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True
     )
     
     @property
