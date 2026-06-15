@@ -215,7 +215,7 @@ export default function ToolsContent() {
             <Link href="/demo" className="mp-btn-white">
               Book a Free Demo <FiArrowRight />
             </Link>
-            <Link href="/features" className="mp-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+            <Link href="/features" className="mp-btn-ghost">
               Explore All Features
             </Link>
           </div>

@@ -78,7 +78,7 @@
   letter-spacing: -0.03em;
   margin: 0 auto 1.25rem;
   max-width: 800px;
-  color: var(--text-strong, #0b1220);
+  color: var(--text-strong);
 }
 
 .mp-hero-subtitle {
@@ -732,8 +732,8 @@
   padding: 5rem 2rem;
   text-align: center;
   overflow: hidden;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  color: #fff;
+  background: linear-gradient(135deg, var(--surface, #ffffff) 0%, var(--surface-elevated, #fbfcff) 50%, var(--surface-muted, #f3f6fb) 100%);
+  color: var(--text);
 }
 
 .mp-cta::before {
@@ -741,8 +741,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 50% 80% at 20% 50%, rgba(47,110,242,0.3) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 80% at 80% 50%, rgba(139,92,246,0.2) 0%, transparent 60%);
+    radial-gradient(ellipse 50% 80% at 20% 50%, var(--accent-soft, rgba(47,110,242,0.1)) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 80% at 80% 50%, rgba(139,92,246,0.08) 0%, transparent 60%);
   pointer-events: none;
 }
 
@@ -756,14 +756,25 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: 1rem;
+  color: var(--text-strong);
 }
 
 .mp-cta-text {
   font-size: 1.1rem;
   line-height: 1.7;
-  opacity: 0.85;
+  color: var(--text-muted);
   max-width: 550px;
   margin: 0 auto 2rem;
+}
+
+[data-theme='dark'] .mp-cta {
+  background: linear-gradient(135deg, var(--surface, #101826) 0%, var(--surface-elevated, #121d2f) 50%, var(--surface-muted, #0d1524) 100%);
+}
+
+[data-theme='dark'] .mp-cta::before {
+  background:
+    radial-gradient(ellipse 50% 80% at 20% 50%, rgba(114,160,255,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 80% at 80% 50%, rgba(139,92,246,0.15) 0%, transparent 60%);
 }
 
 /* ── BADGE ROW ── */

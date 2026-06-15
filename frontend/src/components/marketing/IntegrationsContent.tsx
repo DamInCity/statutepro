@@ -246,7 +246,7 @@ export default function IntegrationsContent() {
             <Link href="/demo" className="mp-btn-white">
               Discuss Integrations <FiArrowRight />
             </Link>
-            <Link href="/contact" className="mp-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+            <Link href="/contact" className="mp-btn-ghost">
               Request an Integration
             </Link>
           </div>

@@ -295,7 +295,7 @@ export default function PricingContent() {
             <Link href="/register" className="mp-btn-white">
               Start Free Trial <FiArrowRight />
             </Link>
-            <Link href="/demo" className="mp-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+            <Link href="/demo" className="mp-btn-ghost">
               Book a Demo Instead
             </Link>
           </div>

@@ -97,13 +97,13 @@ export default function SecurityContent() {
           </span>
         </Reveal>
         <Reveal delay={0.1}>
-          <h1 className="mp-hero-title" style={{ color: '#f7faff' }}>
+          <h1 className="mp-hero-title">
             Enterprise-grade security.{' '}
             <span className="mp-gradient-text">Legal-grade trust.</span>
           </h1>
         </Reveal>
         <Reveal delay={0.2}>
-          <p className="mp-hero-subtitle" style={{ color: '#9baac2' }}>
+          <p className="mp-hero-subtitle">
             Law firms handle some of the most sensitive information in any industry — client
             confidences, financial records, privileged communications, and trust funds. StatutePro
             is built from the ground up to protect it all with the security controls your
@@ -115,7 +115,7 @@ export default function SecurityContent() {
             <Link href="/trust-center" className="mp-btn-primary">
               Visit Trust Center <FiArrowRight />
             </Link>
-            <Link href="/demo" className="mp-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+            <Link href="/demo" className="mp-btn-ghost">
               Book Security Walkthrough
             </Link>
           </div>
@@ -252,7 +252,7 @@ export default function SecurityContent() {
             <Link href="/demo" className="mp-btn-white">
               Book Security Walkthrough <FiArrowRight />
             </Link>
-            <Link href="/trust-center" className="mp-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+            <Link href="/trust-center" className="mp-btn-ghost">
               Visit Trust Center
             </Link>
           </div>

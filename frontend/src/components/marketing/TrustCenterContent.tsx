@@ -164,7 +164,7 @@ export default function TrustCenterContent() {
             <Link href="/demo" className="mp-btn-primary">
               Book Compliance Review <FiArrowRight />
             </Link>
-            <Link href="/security" className="mp-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+            <Link href="/security" className="mp-btn-ghost">
               Security Overview
             </Link>
           </div>
@@ -287,7 +287,7 @@ export default function TrustCenterContent() {
             <Link href="/demo" className="mp-btn-white">
               Book Compliance Review <FiArrowRight />
             </Link>
-            <Link href="/security" className="mp-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+            <Link href="/security" className="mp-btn-ghost">
               Security Overview
             </Link>
           </div>

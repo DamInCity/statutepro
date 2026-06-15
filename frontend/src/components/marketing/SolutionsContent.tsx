@@ -234,7 +234,7 @@ export default function SolutionsContent() {
             <Link href="/demo" className="mp-btn-white">
               Book a Free Consultation <FiArrowRight />
             </Link>
-            <Link href="/pricing" className="mp-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+            <Link href="/pricing" className="mp-btn-ghost">
               Compare Pricing
             </Link>
           </div>

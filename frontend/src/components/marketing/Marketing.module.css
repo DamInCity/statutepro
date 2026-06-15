@@ -5,12 +5,14 @@
 }
 
 .topNav {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 200;
-  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
 }
 
 .topNavInner {
@@ -91,6 +93,7 @@
 
 .siteMain {
   flex: 1;
+  margin-top: var(--header-height);
 }
 
 .container {

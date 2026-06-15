@@ -311,7 +311,7 @@ export default function FeaturesContent() {
             <Link href="/demo" className="mp-btn-white">
               Book a Free Demo <FiArrowRight />
             </Link>
-            <Link href="/pricing" className="mp-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
+            <Link href="/pricing" className="mp-btn-ghost">
               See Pricing Plans
             </Link>
           </div>
